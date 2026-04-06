@@ -1,0 +1,15 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import NotasList from '../../components/NotasList';
+
+const user = Astro.locals.user;
+---
+
+<AppLayout title="Registro de Notas">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Registro de Notas</h1>
+    <p class="text-sm text-gray-500">Autorización de Salida de Materiales y/o Equipos</p>
+  </div>
+
+  <NotasList client:load isAdmin={user.role === 'admin'} username={user.username} />
+</AppLayout>

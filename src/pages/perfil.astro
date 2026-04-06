@@ -1,0 +1,134 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import { db } from '../lib/db';
+import { profiles } from '../lib/schema';
+import { eq } from 'drizzle-orm';
+
+const user = Astro.locals.user;
+const profile = db.select().from(profiles).where(eq(profiles.userId, user.userId)).get();
+---
+
+<AppLayout title="Mi Perfil">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Mi Perfil</h1>
+  </div>
+
+  <div class="max-w-lg space-y-6">
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-pa-orange">Datos</h2>
+      <div class="mb-4 grid grid-cols-2 gap-3 text-sm">
+        <dt class="text-gray-500">Usuario</dt>
+        <dd class="font-medium">{user.username}</dd>
+        <dt class="text-gray-500">Rol</dt>
+        <dd><span class="rounded-full bg-pa-orange/20 px-2 py-0.5 text-xs text-pa-orange">{user.role}</span></dd>
+      </div>
+      <form id="profileForm" class="space-y-4">
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-600">Nombre</label>
+          <input type="text" id="profileNombre" value={profile?.nombre || ''} class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-600">Apellido</label>
+          <input type="text" id="profileApellido" value={profile?.apellido || ''} class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-600">C.I.</label>
+          <input type="text" id="profileCi" value={profile?.ci || ''} class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" />
+        </div>
+        <div id="profileMsg" class="hidden rounded-lg p-3 text-sm"></div>
+        <button type="submit" class="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white">
+          Guardar Datos
+        </button>
+      </form>
+    </div>
+
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-pa-orange">Cambiar Contraseña</h2>
+      <form id="passwordForm" class="space-y-4">
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-600">Contraseña actual</label>
+          <input type="password" id="currentPassword" required class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-600">Nueva contraseña</label>
+          <input type="password" id="newPassword" required minlength="4" class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-gray-600">Confirmar nueva contraseña</label>
+          <input type="password" id="confirmPassword" required class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" />
+        </div>
+        <div id="passwordMsg" class="hidden rounded-lg p-3 text-sm"></div>
+        <button type="submit" class="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white">
+          Cambiar Contraseña
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Profile form
+    const profileForm = document.getElementById('profileForm') as HTMLFormElement;
+    const profileMsg = document.getElementById('profileMsg') as HTMLDivElement;
+
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      profileMsg.classList.add('hidden');
+
+      const nombre = (document.getElementById('profileNombre') as HTMLInputElement).value;
+      const apellido = (document.getElementById('profileApellido') as HTMLInputElement).value;
+      const ci = (document.getElementById('profileCi') as HTMLInputElement).value;
+
+      const res = await fetch('/api/perfil', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, apellido, ci }),
+      });
+
+      if (res.ok) {
+        profileMsg.textContent = 'Datos actualizados correctamente';
+        profileMsg.className = 'rounded-lg bg-green-50 p-3 text-sm text-green-700';
+      } else {
+        profileMsg.textContent = 'Error al guardar';
+        profileMsg.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-600';
+      }
+      profileMsg.classList.remove('hidden');
+    });
+
+    // Password form
+    const form = document.getElementById('passwordForm') as HTMLFormElement;
+    const msg = document.getElementById('passwordMsg') as HTMLDivElement;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.classList.add('hidden');
+
+      const currentPassword = (document.getElementById('currentPassword') as HTMLInputElement).value;
+      const newPassword = (document.getElementById('newPassword') as HTMLInputElement).value;
+      const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement).value;
+
+      if (newPassword !== confirmPassword) {
+        msg.textContent = 'Las contraseñas no coinciden';
+        msg.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-600';
+        msg.classList.remove('hidden');
+        return;
+      }
+
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        msg.textContent = 'Contraseña actualizada correctamente';
+        msg.className = 'rounded-lg bg-green-50 p-3 text-sm text-green-700';
+        form.reset();
+      } else {
+        msg.textContent = data.error;
+        msg.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-600';
+      }
+      msg.classList.remove('hidden');
+    });
+  </script>
+</AppLayout>

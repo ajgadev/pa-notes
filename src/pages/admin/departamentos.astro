@@ -1,0 +1,16 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import AdminCrud from '../../components/AdminCrud';
+---
+
+<AppLayout title="Departamentos">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Departamentos</h1>
+  </div>
+  <AdminCrud
+    client:load
+    title="Departamentos"
+    apiUrl="/api/departamentos?all=1"
+    columns={[{ key: 'name', label: 'Nombre' }]}
+  />
+</AppLayout>

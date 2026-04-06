@@ -1,0 +1,11 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import AdminConfig from '../../components/AdminConfig';
+---
+
+<AppLayout title="Configuración">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Configuración del Sistema</h1>
+  </div>
+  <AdminConfig client:load />
+</AppLayout>

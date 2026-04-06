@@ -1,0 +1,38 @@
+import type { APIRoute } from 'astro';
+import { db } from '../../../../lib/db';
+import { notas } from '../../../../lib/schema';
+import { eq } from 'drizzle-orm';
+
+export const PUT: APIRoute = async ({ params, request, locals }) => {
+  if (locals.user.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Solo admin puede cambiar estado' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const id = parseInt(params.id!);
+  const body = await request.json();
+  const estado = body.estado;
+
+  if (estado !== 'Vigente' && estado !== 'Nula') {
+    return new Response(JSON.stringify({ error: 'Estado inválido' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const existing = db.select().from(notas).where(eq(notas.id, id)).get();
+  if (!existing) {
+    return new Response(JSON.stringify({ error: 'Nota no encontrada' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  db.update(notas).set({ estado }).where(eq(notas.id, id)).run();
+
+  return new Response(JSON.stringify({ success: true, estado }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+};

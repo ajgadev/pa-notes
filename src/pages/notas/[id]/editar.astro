@@ -1,0 +1,74 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+import NotaForm from '../../../components/NotaForm';
+import { db } from '../../../lib/db';
+import { notas, notaItems, profiles } from '../../../lib/schema';
+import { eq } from 'drizzle-orm';
+
+const user = Astro.locals.user;
+const id = parseInt(Astro.params.id!);
+
+const nota = db.select().from(notas).where(eq(notas.id, id)).get();
+if (!nota) {
+  return Astro.redirect('/notas');
+}
+
+const items = db.select().from(notaItems).where(eq(notaItems.notaId, id)).all();
+const profile = db.select().from(profiles).where(eq(profiles.userId, user.userId)).get();
+
+const userProfile = {
+  nombre: profile?.nombre ?? '',
+  apellido: profile?.apellido ?? '',
+  ci: profile?.ci ?? '',
+};
+
+// Parse tipoSalida for "Otros: ..." case
+let tipoSalida = nota.tipoSalida;
+let tipoSalidaOtro = '';
+if (tipoSalida.startsWith('Otros:')) {
+  tipoSalidaOtro = tipoSalida.replace('Otros: ', '').trim();
+  tipoSalida = 'Otros';
+}
+
+const initialData = {
+  departamento: nota.departamento ?? '',
+  fecha: nota.fecha ?? '',
+  empresa: nota.empresa,
+  base: nota.base,
+  pozo: nota.pozo ?? '',
+  taladro: nota.taladro ?? '',
+  tipoSalida,
+  tipoSalidaOtro,
+  solicitante: nota.solicitante,
+  destino: nota.destino,
+  vPlaca: nota.vPlaca ?? '',
+  vMarca: nota.vMarca ?? '',
+  vModelo: nota.vModelo ?? '',
+  cNombre: nota.cNombre ?? '',
+  cCi: nota.cCi ?? '',
+  gNombre: nota.gNombre ?? '',
+  gCi: nota.gCi ?? '',
+  sNombre: nota.sNombre ?? '',
+  sCi: nota.sCi ?? '',
+  elabNombre: nota.elabNombre ?? '',
+  elabCi: nota.elabCi ?? '',
+  aproNombre: nota.aproNombre ?? '',
+  aproCi: nota.aproCi ?? '',
+  items: items.map((it) => ({
+    noParte: it.noParte ?? '',
+    unidad: it.unidad,
+    cantidad: it.cantidad,
+    descripcion: it.descripcion,
+    noSerial: it.noSerial ?? '',
+  })),
+};
+---
+
+<AppLayout title={`Editar Nota #${nota.numero}`}>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Editar Nota #{nota.numero}</h1>
+    <p class="text-sm text-gray-500">FO-SF-001 — Autorización de Salida de Materiales y/o Equipos</p>
+  </div>
+
+  <NotaForm client:load userProfile={userProfile} initialData={initialData} notaId={id} />
+</AppLayout>

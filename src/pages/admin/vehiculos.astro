@@ -1,0 +1,22 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import AdminCrud from '../../components/AdminCrud';
+---
+
+<AppLayout title="Vehículos">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Vehículos</h1>
+  </div>
+  <AdminCrud
+    client:load
+    title="Vehículos"
+    apiUrl="/api/vehiculos?all=1"
+    columns={[
+      { key: 'placa', label: 'Placa' },
+      { key: 'marca', label: 'Marca' },
+      { key: 'modelo', label: 'Modelo' },
+    ]}
+    csvFormat="placa,marca,modelo"
+    csvImportUrl="/api/vehiculos/import-csv"
+  />
+</AppLayout>

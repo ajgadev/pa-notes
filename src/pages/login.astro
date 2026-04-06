@@ -1,0 +1,94 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Iniciar Sesión">
+  <div class="flex min-h-screen items-center justify-center bg-pa-dark">
+    <div class="w-full max-w-md rounded-xl bg-white p-8 shadow-xl">
+      <!-- Logo -->
+      <div class="mb-8 text-center">
+        <h1 class="text-4xl font-bold">
+          <span class="text-black">Petro</span><span class="text-pa-orange">Alianza</span>
+        </h1>
+        <p class="mt-2 text-sm text-gray-500">Sistema de Notas de Salida · FO-SF-001</p>
+      </div>
+
+      <!-- Form -->
+      <form id="loginForm" class="space-y-5">
+        <div>
+          <label for="username" class="mb-1 block text-sm font-medium text-gray-700">Usuario</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            autocomplete="username"
+            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-pa-orange focus:ring-2 focus:ring-pa-orange/30 focus:outline-none"
+            placeholder="Ingrese su usuario"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="mb-1 block text-sm font-medium text-gray-700">Contraseña</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            autocomplete="current-password"
+            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-pa-orange focus:ring-2 focus:ring-pa-orange/30 focus:outline-none"
+            placeholder="Ingrese su contraseña"
+          />
+        </div>
+
+        <div id="error" class="hidden rounded-lg bg-red-50 p-3 text-sm text-red-600"></div>
+
+        <button
+          type="submit"
+          class="w-full rounded-lg bg-pa-orange px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pa-orange/90 focus:ring-2 focus:ring-pa-orange/50 focus:outline-none"
+        >
+          Iniciar Sesión
+        </button>
+      </form>
+
+      <div class="mt-4 text-center">
+        <a href="/login/recuperar" class="text-sm text-pa-orange hover:underline">
+          ¿Olvidó su contraseña?
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm') as HTMLFormElement;
+    const errorDiv = document.getElementById('error') as HTMLDivElement;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.classList.add('hidden');
+
+      const username = (document.getElementById('username') as HTMLInputElement).value;
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          window.location.href = '/dashboard';
+        } else {
+          errorDiv.textContent = data.error;
+          errorDiv.classList.remove('hidden');
+        }
+      } catch {
+        errorDiv.textContent = 'Error de conexión';
+        errorDiv.classList.remove('hidden');
+      }
+    });
+  </script>
+</Layout>

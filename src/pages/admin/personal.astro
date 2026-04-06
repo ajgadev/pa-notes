@@ -1,0 +1,23 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import AdminCrud from '../../components/AdminCrud';
+---
+
+<AppLayout title="Personal">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Personal</h1>
+  </div>
+  <AdminCrud
+    client:load
+    title="Personal"
+    apiUrl="/api/personal?all=1"
+    columns={[
+      { key: 'ci', label: 'C.I.' },
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'apellido', label: 'Apellido' },
+      { key: 'cargo', label: 'Cargo' },
+    ]}
+    csvFormat="ci,nombre,apellido,cargo"
+    csvImportUrl="/api/personal/import-csv"
+  />
+</AppLayout>

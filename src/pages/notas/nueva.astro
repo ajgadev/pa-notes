@@ -1,0 +1,25 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import NotaForm from '../../components/NotaForm';
+import { db } from '../../lib/db';
+import { profiles } from '../../lib/schema';
+import { eq } from 'drizzle-orm';
+
+const user = Astro.locals.user;
+const profile = db.select().from(profiles).where(eq(profiles.userId, user.userId)).get();
+
+const userProfile = {
+  nombre: profile?.nombre ?? '',
+  apellido: profile?.apellido ?? '',
+  ci: profile?.ci ?? '',
+};
+---
+
+<AppLayout title="Nueva Nota">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Nueva Nota de Salida</h1>
+    <p class="text-sm text-gray-500">FO-SF-001 — Autorización de Salida de Materiales y/o Equipos</p>
+  </div>
+
+  <NotaForm client:load userProfile={userProfile} />
+</AppLayout>

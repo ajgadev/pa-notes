@@ -1,0 +1,11 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import AdminUsuarios from '../../components/AdminUsuarios';
+---
+
+<AppLayout title="Gestión de Usuarios">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
+  </div>
+  <AdminUsuarios client:load />
+</AppLayout>

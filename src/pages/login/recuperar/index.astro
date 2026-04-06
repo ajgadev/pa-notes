@@ -1,0 +1,62 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+---
+
+<Layout title="Recuperar Contraseña">
+  <div class="flex min-h-screen items-center justify-center bg-pa-dark">
+    <div class="w-full max-w-md rounded-xl bg-white p-8 shadow-xl">
+      <div class="mb-6 text-center">
+        <h1 class="text-2xl font-bold">
+          <span class="text-black">Petro</span><span class="text-pa-orange">Alianza</span>
+        </h1>
+        <p class="mt-2 text-sm text-gray-500">Recuperar Contraseña</p>
+      </div>
+
+      <form id="resetForm" class="space-y-4">
+        <div>
+          <label class="mb-1 block text-sm font-medium text-gray-700">Usuario</label>
+          <input type="text" id="username" required class="w-full rounded-lg border px-4 py-2.5 text-sm focus:border-pa-orange focus:outline-none" placeholder="Ingrese su usuario" />
+        </div>
+        <div id="msg" class="hidden rounded-lg p-3 text-sm"></div>
+        <button type="submit" class="w-full rounded-lg bg-pa-orange px-4 py-2.5 text-sm font-semibold text-white">
+          Solicitar Token
+        </button>
+      </form>
+
+      <div class="mt-6 rounded-lg bg-gray-50 p-4 text-xs text-gray-500">
+        <p class="font-medium">¿Cómo funciona?</p>
+        <ol class="mt-2 list-inside list-decimal space-y-1">
+          <li>Ingrese su usuario y solicite un token</li>
+          <li>Contacte al administrador para obtener el token de 6 dígitos</li>
+          <li>Use el token para establecer una nueva contraseña</li>
+        </ol>
+      </div>
+
+      <div class="mt-4 text-center">
+        <a href="/login" class="text-sm text-pa-orange hover:underline">Volver al login</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('resetForm') as HTMLFormElement;
+    const msg = document.getElementById('msg') as HTMLDivElement;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.classList.add('hidden');
+      const username = (document.getElementById('username') as HTMLInputElement).value;
+
+      const res = await fetch('/api/auth/reset-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      const data = await res.json();
+
+      msg.textContent = data.message || data.error;
+      msg.className = `rounded-lg p-3 text-sm ${res.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`;
+      msg.classList.remove('hidden');
+    });
+  </script>
+</Layout>
