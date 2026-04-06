@@ -94,7 +94,8 @@ function seed() {
   // Config
   db.insert(schema.config).values({ key: 'nota_counter', value: '1' }).onConflictDoNothing().run();
   db.insert(schema.config).values({ key: 'company_name', value: 'Petro Alianza' }).onConflictDoNothing().run();
-  console.log('  Config: nota_counter=1, company_name=Petro Alianza');
+  db.insert(schema.config).values({ key: 'nota_prefix', value: 'NS' }).onConflictDoNothing().run();
+  console.log('  Config: nota_counter=1, company_name=Petro Alianza, nota_prefix=NS');
 
   console.log('Seed complete!');
 }

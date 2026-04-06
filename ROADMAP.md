@@ -186,6 +186,19 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 
 ---
 
+## Futuro — Series de numeración
+
+Reemplazar el sistema actual de prefijo+contador único por un CRUD de **series de numeración** en el admin:
+
+- Tabla `nota_series`: id, nombre, prefijo (ej. `NS`, `RE`, `SA`), padding (ej. 4 → `0001`), contador actual, activa
+- Admin puede crear/editar/desactivar series
+- Al crear una nota, el operador selecciona qué serie usar
+- Cada serie mantiene su propio contador independiente
+- El número final se muestra como `{prefijo}-{numero con padding}` (ej. `NS-0001`, `RE-0042`)
+- Migración: convertir la config actual (`nota_prefix`, `nota_counter`) a una serie por defecto
+
+---
+
 ## Stack final corregido
 
 | Capa | Tecnología |

@@ -1,8 +1,12 @@
 ---
 import AppLayout from '../../layouts/AppLayout.astro';
 import NotasList from '../../components/NotasList';
+import { db } from '../../lib/db';
+import { config } from '../../lib/schema';
+import { eq } from 'drizzle-orm';
 
 const user = Astro.locals.user;
+const notaPrefix = db.select().from(config).where(eq(config.key, 'nota_prefix')).get()?.value ?? 'NS';
 ---
 
 <AppLayout title="Registro de Notas">
@@ -11,5 +15,5 @@ const user = Astro.locals.user;
     <p class="text-sm text-gray-500">Autorización de Salida de Materiales y/o Equipos</p>
   </div>
 
-  <NotasList client:load isAdmin={user.role === 'admin'} username={user.username} />
+  <NotasList client:load isAdmin={user.role === 'admin'} username={user.username} notaPrefix={notaPrefix} />
 </AppLayout>

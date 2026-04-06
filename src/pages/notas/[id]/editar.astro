@@ -2,12 +2,14 @@
 import AppLayout from '../../../layouts/AppLayout.astro';
 import NotaForm from '../../../components/NotaForm';
 import { db } from '../../../lib/db';
-import { notas, notaItems, profiles } from '../../../lib/schema';
+import { notas, notaItems, profiles, config } from '../../../lib/schema';
 import { eq } from 'drizzle-orm';
+import { formatNotaNumero } from '../../../lib/format';
 
 const user = Astro.locals.user;
 const id = parseInt(Astro.params.id!);
 
+const notaPrefix = db.select().from(config).where(eq(config.key, 'nota_prefix')).get()?.value ?? 'NS';
 const nota = db.select().from(notas).where(eq(notas.id, id)).get();
 if (!nota) {
   return Astro.redirect('/notas');
@@ -64,9 +66,9 @@ const initialData = {
 };
 ---
 
-<AppLayout title={`Editar Nota #${nota.numero}`}>
+<AppLayout title={`Editar Nota ${formatNotaNumero(nota.numero, notaPrefix)}`}>
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Editar Nota #{nota.numero}</h1>
+    <h1 class="text-2xl font-bold text-gray-900">Editar Nota {formatNotaNumero(nota.numero, notaPrefix)}</h1>
     <p class="text-sm text-gray-500">FO-SF-001 — Autorización de Salida de Materiales y/o Equipos</p>
   </div>
 

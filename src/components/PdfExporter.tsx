@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { formatDate } from '../lib/format';
+import { formatDate, formatNotaNumero } from '../lib/format';
 
 interface NotaItem {
   noParte: string;
@@ -41,12 +41,13 @@ interface NotaData {
 interface Props {
   nota: NotaData;
   username: string;
+  notaPrefix?: string;
 }
 
 const PA_ORANGE = '#FF6101';
 const PA_DARK = '#191825';
 
-export function generatePdf(nota: NotaData, username: string) {
+export function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS') {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const W = 297;
   const H = 210;
@@ -78,7 +79,7 @@ export function generatePdf(nota: NotaData, username: string) {
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor('#FFFFFF');
-  doc.text(`N° ${String(nota.numero).padStart(4, '0')}`, W - margin - 4, y + 10, { align: 'right' });
+  doc.text(`N° ${formatNotaNumero(nota.numero, notaPrefix)}`, W - margin - 4, y + 10, { align: 'right' });
 
   y += 18;
 
@@ -246,10 +247,10 @@ export function generatePdf(nota: NotaData, username: string) {
   return doc;
 }
 
-export default function PdfExportButton({ nota, username }: Props) {
+export default function PdfExportButton({ nota, username, notaPrefix = 'NS' }: Props) {
   const handleExport = () => {
-    const doc = generatePdf(nota, username);
-    doc.save(`nota-${String(nota.numero).padStart(4, '0')}.pdf`);
+    const doc = generatePdf(nota, username, notaPrefix);
+    doc.save(`${notaPrefix}-${String(nota.numero).padStart(4, '0')}.pdf`);
   };
 
   return (

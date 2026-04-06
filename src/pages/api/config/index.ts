@@ -24,6 +24,11 @@ export const PUT: APIRoute = async ({ request }) => {
     db.update(config).set({ value: body.company_name }).where(eq(config.key, 'company_name')).run();
   }
 
+  if (body.nota_prefix !== undefined) {
+    db.insert(config).values({ key: 'nota_prefix', value: body.nota_prefix })
+      .onConflictDoUpdate({ target: config.key, set: { value: body.nota_prefix } }).run();
+  }
+
   if (body.nota_counter !== undefined) {
     const newCounter = parseInt(body.nota_counter, 10);
     if (isNaN(newCounter) || newCounter < 1) {

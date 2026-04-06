@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { generatePdf } from './PdfExporter';
-import { formatDate } from '../lib/format';
+import { formatDate, formatNotaNumero } from '../lib/format';
 
 interface Nota {
   id: number;
@@ -17,28 +17,68 @@ interface Nota {
 interface Props {
   isAdmin: boolean;
   username: string;
+  notaPrefix?: string;
 }
 
-export default function NotasList({ isAdmin, username }: Props) {
+type SortKey = 'numero' | 'estado' | 'departamento' | 'tipoSalida' | 'solicitante' | 'destino' | 'fecha';
+
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'numero', label: 'N°' },
+  { key: 'estado', label: 'Estado' },
+  { key: 'departamento', label: 'Departamento' },
+  { key: 'tipoSalida', label: 'Tipo' },
+  { key: 'solicitante', label: 'Solicitante' },
+  { key: 'destino', label: 'Destino' },
+  { key: 'fecha', label: 'Fecha' },
+];
+
+export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Props) {
   const [notas, setNotas] = useState<Nota[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const limit = 20;
+  const [sortKey, setSortKey] = useState<SortKey>('numero');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [pageSize, setPageSize] = useState(20);
 
   const fetchNotas = async () => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (search) params.set('q', search);
-    const res = await fetch(`/api/notas?${params}`);
+    const res = await fetch(`/api/notas?page=1&limit=9999${search ? `&q=${encodeURIComponent(search)}` : ''}`);
     const data = await res.json();
     setNotas(data.data);
     setTotal(data.total);
     setLoading(false);
   };
 
-  useEffect(() => { fetchNotas(); }, [page, search]);
+  useEffect(() => { fetchNotas(); }, [search]);
+
+  const sorted = useMemo(() => {
+    const arr = [...notas];
+    arr.sort((a, b) => {
+      let va: string | number = a[sortKey] ?? '';
+      let vb: string | number = b[sortKey] ?? '';
+      if (sortKey === 'numero') { va = Number(va); vb = Number(vb); }
+      if (sortKey === 'fecha') { va = a.fecha || a.createdAt || ''; vb = b.fecha || b.createdAt || ''; }
+      if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
+      return sortDir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+    return arr;
+  }, [notas, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(sorted.length / pageSize);
+  const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); }
+    else { setSortKey(key); setSortDir('asc'); }
+    setPage(1);
+  };
+
+  const sortIcon = (key: SortKey) => {
+    if (sortKey !== key) return ' \u2195';
+    return sortDir === 'asc' ? ' \u2191' : ' \u2193';
+  };
 
   const toggleEstado = async (id: number, current: string) => {
     const nuevoEstado = current === 'Vigente' ? 'Nula' : 'Vigente';
@@ -54,15 +94,12 @@ export default function NotasList({ isAdmin, username }: Props) {
   const exportPdf = async (id: number) => {
     const res = await fetch(`/api/notas/${id}`);
     const data = await res.json();
-    const doc = generatePdf(data, username);
-    doc.save(`nota-${String(data.numero).padStart(4, '0')}.pdf`);
+    const doc = generatePdf(data, username, notaPrefix);
+    doc.save(`${notaPrefix}-${String(data.numero).padStart(4, '0')}.pdf`);
   };
-
-  const totalPages = Math.ceil(total / limit);
 
   return (
     <div>
-      {/* Search */}
       <div className="mb-4 flex items-center gap-3">
         <input
           type="text"
@@ -79,33 +116,34 @@ export default function NotasList({ isAdmin, username }: Props) {
         </a>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-pa-dark text-left text-xs text-white">
-              <th className="px-4 py-3">N°</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Departamento</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Solicitante</th>
-              <th className="px-4 py-3">Destino</th>
-              <th className="px-4 py-3">Fecha</th>
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  className="cursor-pointer select-none px-4 py-3 hover:bg-white/10"
+                  onClick={() => handleSort(col.key)}
+                >
+                  {col.label}{sortIcon(col.key)}
+                </th>
+              ))}
               <th className="px-4 py-3">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
-            ) : notas.length === 0 ? (
+            ) : paginated.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No hay notas</td></tr>
             ) : (
-              notas.map((n, i) => (
+              paginated.map((n, i) => (
                 <tr
                   key={n.id}
                   className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${n.estado === 'Nula' ? 'line-through opacity-50' : ''}`}
                 >
-                  <td className="px-4 py-2 font-mono font-bold">{n.numero}</td>
+                  <td className="px-4 py-2 font-mono font-bold">{formatNotaNumero(n.numero, notaPrefix)}</td>
                   <td className="px-4 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                       n.estado === 'Vigente' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -140,9 +178,20 @@ export default function NotasList({ isAdmin, username }: Props) {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-          <span>{total} notas en total</span>
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center gap-3">
+          <span>{sorted.length} notas en total</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="rounded border px-2 py-1 text-xs"
+          >
+            {[10, 20, 50, 100].map(n => (
+              <option key={n} value={n}>{n} por página</option>
+            ))}
+          </select>
+        </div>
+        {totalPages > 1 && (
           <div className="flex gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -160,8 +209,8 @@ export default function NotasList({ isAdmin, username }: Props) {
               Siguiente
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

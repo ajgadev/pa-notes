@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface Column {
   key: string;
@@ -14,6 +14,8 @@ interface Props {
   csvImportUrl?: string;
 }
 
+const PAGE_SIZE = 15;
+
 export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImportUrl }: Props) {
   const [items, setItems] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -25,6 +27,10 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
   const baseUrl = apiUrl.split('?')[0];
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any>(null);
+  const [sortKey, setSortKey] = useState<string>(columns[0]?.key || '');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   const fetchItems = async () => {
     const sep = apiUrl.includes('?') ? '&' : '?';
@@ -33,6 +39,31 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
   };
 
   useEffect(() => { fetchItems(); }, [search]);
+
+  const sorted = useMemo(() => {
+    const arr = [...items];
+    arr.sort((a, b) => {
+      const va = a[sortKey] ?? '';
+      const vb = b[sortKey] ?? '';
+      const cmp = String(va).localeCompare(String(vb), 'es', { numeric: true });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [items, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(sorted.length / pageSize);
+  const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); }
+    else { setSortKey(key); setSortDir('asc'); }
+    setPage(1);
+  };
+
+  const sortIcon = (key: string) => {
+    if (sortKey !== key) return ' \u2195';
+    return sortDir === 'asc' ? ' \u2191' : ' \u2193';
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,12 +122,8 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
     if (!csvFile) return;
     const text = await csvFile.text();
     const lines = text.trim().split('\n').map(l => l.split(',').map(c => c.trim()));
-    const preview = lines.slice(0, 6);
-    const total = lines.length;
-    setCsvPreview({ preview, total });
+    setCsvPreview({ preview: lines.slice(0, 6), total: lines.length });
   };
-
-  const filtered = items;
 
   return (
     <div>
@@ -105,7 +132,7 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
           type="text"
           placeholder="Buscar..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="rounded-lg border px-4 py-2 text-sm focus:border-pa-orange focus:outline-none"
         />
         <button onClick={() => setShowCreate(!showCreate)} className="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white">
@@ -122,7 +149,6 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
         )}
       </div>
 
-      {/* CSV Preview Modal */}
       {csvFile && !csvPreview && (
         <div className="mb-4 rounded-lg border bg-yellow-50 p-4">
           <p className="text-sm">Archivo: <strong>{csvFile.name}</strong></p>
@@ -152,7 +178,6 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
         </div>
       )}
 
-      {/* Create form */}
       {showCreate && (
         <form onSubmit={handleCreate} className="mb-4 rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex flex-wrap gap-3">
@@ -172,58 +197,107 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
         </form>
       )}
 
-      {/* Table */}
       <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-pa-dark text-left text-xs text-white">
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-3">{col.label}</th>
+                <th
+                  key={col.key}
+                  className="cursor-pointer select-none px-4 py-3 hover:bg-white/10"
+                  onClick={() => handleSort(col.key)}
+                >
+                  {col.label}{sortIcon(col.key)}
+                </th>
               ))}
-              <th className="px-4 py-3">Estado</th>
+              <th
+                className="cursor-pointer select-none px-4 py-3 hover:bg-white/10"
+                onClick={() => handleSort('active')}
+              >
+                Estado{sortIcon('active')}
+              </th>
               <th className="px-4 py-3">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((item, i) => (
-              <tr key={item.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-2">
-                    {editId === item.id && col.editable !== false ? (
-                      <input
-                        value={editForm[col.key] ?? item[col.key]}
-                        onChange={(e) => setEditForm({ ...editForm, [col.key]: e.target.value })}
-                        className="rounded border px-2 py-1 text-sm"
-                      />
-                    ) : (
-                      item[col.key]
-                    )}
+            {paginated.length === 0 ? (
+              <tr><td colSpan={columns.length + 2} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
+            ) : (
+              paginated.map((item, i) => (
+                <tr key={item.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-4 py-2">
+                      {editId === item.id && col.editable !== false ? (
+                        <input
+                          value={editForm[col.key] ?? item[col.key]}
+                          onChange={(e) => setEditForm({ ...editForm, [col.key]: e.target.value })}
+                          className="rounded border px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        item[col.key]
+                      )}
+                    </td>
+                  ))}
+                  <td className="px-4 py-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {item.active ? 'Activo' : 'Inactivo'}
+                    </span>
                   </td>
-                ))}
-                <td className="px-4 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {item.active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="px-4 py-2">
-                  <div className="flex gap-1.5">
-                    {editId === item.id ? (
-                      <>
-                        <button onClick={() => handleUpdate(item.id)} className="rounded border border-green-400 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500 hover:text-white">Guardar</button>
-                        <button onClick={() => setEditId(null)} className="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100">Cancelar</button>
-                      </>
-                    ) : (
-                      <button onClick={() => { setEditId(item.id); setEditForm({}); }} className="rounded border border-pa-orange px-2.5 py-1 text-xs font-medium text-pa-orange hover:bg-pa-orange hover:text-white">Editar</button>
-                    )}
-                    <button onClick={() => toggleActive(item.id, item.active)} className={`rounded border px-2.5 py-1 text-xs font-medium ${item.active ? 'border-red-400 text-red-500 hover:bg-red-500 hover:text-white' : 'border-green-400 text-green-600 hover:bg-green-500 hover:text-white'}`}>
-                      {item.active ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  <td className="px-4 py-2">
+                    <div className="flex gap-1.5">
+                      {editId === item.id ? (
+                        <>
+                          <button onClick={() => handleUpdate(item.id)} className="rounded border border-green-400 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500 hover:text-white">Guardar</button>
+                          <button onClick={() => setEditId(null)} className="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100">Cancelar</button>
+                        </>
+                      ) : (
+                        <button onClick={() => { setEditId(item.id); setEditForm({}); }} className="rounded border border-pa-orange px-2.5 py-1 text-xs font-medium text-pa-orange hover:bg-pa-orange hover:text-white">Editar</button>
+                      )}
+                      <button onClick={() => toggleActive(item.id, item.active)} className={`rounded border px-2.5 py-1 text-xs font-medium ${item.active ? 'border-red-400 text-red-500 hover:bg-red-500 hover:text-white' : 'border-green-400 text-green-600 hover:bg-green-500 hover:text-white'}`}>
+                        {item.active ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center gap-3">
+          <span>{sorted.length} registros en total</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="rounded border px-2 py-1 text-xs"
+          >
+            {[10, 15, 25, 50, 100].map(n => (
+              <option key={n} value={n}>{n} por página</option>
+            ))}
+          </select>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded border px-3 py-1 disabled:opacity-30"
+            >
+              Anterior
+            </button>
+            <span className="px-2 py-1">Página {page} de {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="rounded border px-3 py-1 disabled:opacity-30"
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

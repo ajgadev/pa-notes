@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 export default function AdminConfig() {
   const [companyName, setCompanyName] = useState('');
+  const [notaPrefix, setNotaPrefix] = useState('');
   const [notaCounter, setNotaCounter] = useState('');
   const [stats, setStats] = useState<{ totalNotas: number; dbPath: string; version: string }>({ totalNotas: 0, dbPath: '', version: '' });
   const [message, setMessage] = useState('');
@@ -11,6 +12,7 @@ export default function AdminConfig() {
     const res = await fetch('/api/config');
     const data = await res.json();
     setCompanyName(data.config.company_name || '');
+    setNotaPrefix(data.config.nota_prefix || 'NS');
     setNotaCounter(data.config.nota_counter || '1');
     setStats(data.stats);
   };
@@ -64,6 +66,34 @@ export default function AdminConfig() {
             className="w-full max-w-sm rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none"
           />
           <button onClick={saveCompanyName} className="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white">
+            Guardar
+          </button>
+        </div>
+      </div>
+
+      {/* Nota prefix */}
+      <div className="rounded-xl border bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-pa-orange">Prefijo de Notas</h2>
+        <p className="mb-3 text-xs text-gray-500">Prefijo que aparece antes del número de nota, por ejemplo: {notaPrefix}-0001</p>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={notaPrefix}
+            onChange={(e) => setNotaPrefix(e.target.value.toUpperCase())}
+            maxLength={10}
+            className="w-32 rounded-md border px-3 py-2 text-sm font-mono focus:border-pa-orange focus:outline-none"
+          />
+          <button
+            onClick={async () => {
+              const res = await fetch('/api/config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nota_prefix: notaPrefix }),
+              });
+              if (res.ok) setMessage('Prefijo actualizado');
+            }}
+            className="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white"
+          >
             Guardar
           </button>
         </div>
