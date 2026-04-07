@@ -131,7 +131,26 @@ function drawCheckbox(
   doc.text(label, boxX + boxSize + 1.5, y + h / 2 + 1, { maxWidth: w - boxSize - 5 });
 }
 
-export function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS') {
+async function loadImageAsDataUrl(src: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(null); return; }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+export async function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS') {
+  const logoDataUrl = await loadImageAsDataUrl('/pa-logo.png');
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const PW = 297;
   const PH = 210;
@@ -155,19 +174,24 @@ export function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS')
   const hdrH = 15;
   const hdrRowH = hdrH / 3;
 
-  // Logo area (A1:C3) - dark background
-  drawCell(doc, c[0], y, c[3] - c[0], hdrH, '', { fill: PA_DARK });
-
-  // Logo text on dark background
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor('#FFFFFF');
-  const logoTextX = c[0] + 3;
-  const logoTextY = y + hdrH / 2 + 1;
-  doc.text('Petro', logoTextX, logoTextY);
-  const pw = doc.getTextWidth('Petro');
-  doc.setTextColor(PA_ORANGE);
-  doc.text('Alianza', logoTextX + pw, logoTextY);
+  // Logo area (A1:C3)
+  const logoAreaW = c[3] - c[0];
+  if (logoDataUrl) {
+    drawCell(doc, c[0], y, logoAreaW, hdrH, '', {});
+    const pad = 1.5;
+    const logoW = logoAreaW - 2 * pad;
+    const logoH = hdrH - 2 * pad;
+    doc.addImage(logoDataUrl, 'PNG', c[0] + pad, y + pad, logoW, logoH);
+  } else {
+    drawCell(doc, c[0], y, logoAreaW, hdrH, '', { fill: PA_DARK });
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor('#FFFFFF');
+    doc.text('Petro', c[0] + 3, y + hdrH / 2 + 1);
+    const pw = doc.getTextWidth('Petro');
+    doc.setTextColor(PA_ORANGE);
+    doc.text('Alianza', c[0] + 3 + pw, y + hdrH / 2 + 1);
+  }
 
   // Title area (D1:K3)
   drawCell(doc, c[3], y, c[11] - c[3], hdrH, '', {});
@@ -354,14 +378,14 @@ export function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS')
   doc.text(notaNumStr, c[15] - 2, y + 3, { align: 'right' });
 
   // Small generation info
-  doc.setFontSize(4.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor('#999999');
-  doc.text(
-    `Generado: ${new Date().toLocaleString('es-VE')} — ${username}`,
-    c[0],
-    PH - 3,
-  );
+  // doc.setFontSize(4.5);
+  // doc.setFont('helvetica', 'normal');
+  // doc.setTextColor('#999999');
+  // doc.text(
+  //   `Generado: ${new Date().toLocaleString('es-VE')} — ${username}`,
+  //   c[0],
+  //   PH - 3,
+  // );
 
   // ============================================================
   // WATERMARK for Nula
@@ -381,8 +405,8 @@ export function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS')
 }
 
 export default function PdfExportButton({ nota, username, notaPrefix = 'NS' }: Props) {
-  const handleExport = () => {
-    const doc = generatePdf(nota, username, notaPrefix);
+  const handleExport = async () => {
+    const doc = await generatePdf(nota, username, notaPrefix);
     doc.save(`${notaPrefix}-${String(nota.numero).padStart(4, '0')}.pdf`);
   };
 

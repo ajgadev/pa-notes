@@ -94,7 +94,7 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
   const exportPdf = async (id: number) => {
     const res = await fetch(`/api/notas/${id}`);
     const data = await res.json();
-    const doc = generatePdf(data, username, notaPrefix);
+    const doc = await generatePdf(data, username, notaPrefix);
     doc.save(`${notaPrefix}-${String(data.numero).padStart(4, '0')}.pdf`);
   };
 
