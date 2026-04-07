@@ -19,7 +19,12 @@ export const GET: APIRoute = async ({ url }) => {
   });
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  if (locals.user?.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Solo admin puede modificar departamentos' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const body = await request.json();
   const { action } = body;
 

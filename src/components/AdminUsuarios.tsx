@@ -4,6 +4,7 @@ interface User {
   id: number;
   username: string;
   role: string;
+  email: string;
   active: boolean;
   nombre: string;
   apellido: string;
@@ -18,7 +19,7 @@ const PAGE_SIZE = 15;
 export default function AdminUsuarios() {
   const [users, setUsers] = useState<User[]>([]);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ username: '', password: '', role: 'operador', nombre: '', apellido: '', ci: '' });
+  const [form, setForm] = useState({ username: '', password: '', role: 'operador', nombre: '', apellido: '', ci: '', email: '' });
   const [error, setError] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('username');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -40,6 +41,7 @@ export default function AdminUsuarios() {
       u.username.toLowerCase().includes(q) ||
       u.nombre?.toLowerCase().includes(q) ||
       u.apellido?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
       u.role.toLowerCase().includes(q)
     );
   }, [users, search]);
@@ -81,7 +83,7 @@ export default function AdminUsuarios() {
     const data = await res.json();
     if (res.ok) {
       setShowCreate(false);
-      setForm({ username: '', password: '', role: 'operador', nombre: '', apellido: '', ci: '' });
+      setForm({ username: '', password: '', role: 'operador', nombre: '', apellido: '', ci: '', email: '' });
       fetchUsers();
     } else {
       setError(data.error);
@@ -144,6 +146,7 @@ export default function AdminUsuarios() {
             <input placeholder="Nombre" value={form.nombre} onChange={(e) => setForm({...form, nombre: e.target.value})} className="rounded-md border px-3 py-2 text-sm" />
             <input placeholder="Apellido" value={form.apellido} onChange={(e) => setForm({...form, apellido: e.target.value})} className="rounded-md border px-3 py-2 text-sm" />
             <input placeholder="C.I." value={form.ci} onChange={(e) => setForm({...form, ci: e.target.value})} className="rounded-md border px-3 py-2 text-sm" />
+            <input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} className="rounded-md border px-3 py-2 text-sm" />
           </div>
           {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
           <button type="submit" className="mt-3 rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white">Crear</button>
@@ -156,6 +159,7 @@ export default function AdminUsuarios() {
             <tr className="bg-pa-dark text-left text-xs text-white">
               <th className="cursor-pointer select-none px-4 py-3 hover:bg-white/10" onClick={() => handleSort('username')}>Usuario{sortIcon('username')}</th>
               <th className="cursor-pointer select-none px-4 py-3 hover:bg-white/10" onClick={() => handleSort('nombre')}>Nombre{sortIcon('nombre')}</th>
+              <th className="px-4 py-3">Email</th>
               <th className="cursor-pointer select-none px-4 py-3 hover:bg-white/10" onClick={() => handleSort('role')}>Rol{sortIcon('role')}</th>
               <th className="cursor-pointer select-none px-4 py-3 hover:bg-white/10" onClick={() => handleSort('active')}>Estado{sortIcon('active')}</th>
               <th className="px-4 py-3">Token Activo</th>
@@ -164,12 +168,13 @@ export default function AdminUsuarios() {
           </thead>
           <tbody>
             {paginated.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Sin usuarios</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Sin usuarios</td></tr>
             ) : (
               paginated.map((u, i) => (
                 <tr key={u.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="px-4 py-2 font-medium">{u.username}</td>
                   <td className="px-4 py-2">{u.nombre} {u.apellido}</td>
+                  <td className="px-4 py-2 text-xs text-gray-500">{u.email || '—'}</td>
                   <td className="px-4 py-2">
                     <select
                       value={u.role}

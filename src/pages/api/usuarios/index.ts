@@ -9,6 +9,7 @@ export const GET: APIRoute = async () => {
     id: users.id,
     username: users.username,
     role: users.role,
+    email: users.email,
     active: users.active,
     createdAt: users.createdAt,
     nombre: profiles.nombre,
@@ -46,7 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
   const { action } = body;
 
   if (action === 'create') {
-    const { username, password, role, nombre, apellido, ci } = body;
+    const { username, password, role, nombre, apellido, ci, email } = body;
     if (!username || !password) {
       return new Response(JSON.stringify({ error: 'Usuario y contraseña requeridos' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
@@ -64,6 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
       username,
       password: hashPassword(password),
       role: role || 'operador',
+      email: email || '',
     }).returning().get();
 
     db.insert(profiles).values({
@@ -79,10 +81,11 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   if (action === 'update') {
-    const { id, role, active } = body;
+    const { id, role, active, email } = body;
     const updates: Record<string, unknown> = {};
     if (role !== undefined) updates.role = role;
     if (active !== undefined) updates.active = active;
+    if (email !== undefined) updates.email = email;
 
     db.update(users).set(updates).where(eq(users.id, id)).run();
     return new Response(JSON.stringify({ success: true }), {

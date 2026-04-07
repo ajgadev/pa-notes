@@ -2,7 +2,12 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { personal } from '../../../lib/schema';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  if (locals.user?.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Solo admin puede importar personal' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const formData = await request.formData();
   const file = formData.get('file') as File;
   if (!file) {

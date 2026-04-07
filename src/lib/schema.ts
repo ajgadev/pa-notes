@@ -6,6 +6,7 @@ export const users = sqliteTable('users', {
   username: text('username').unique().notNull(),
   password: text('password').notNull(),
   role: text('role', { enum: ['admin', 'operador'] }).notNull().default('operador'),
+  email: text('email').notNull().default(''),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
@@ -39,6 +40,7 @@ export const personal = sqliteTable('personal', {
   nombre: text('nombre').notNull(),
   apellido: text('apellido').notNull().default(''),
   cargo: text('cargo').notNull().default(''),
+  email: text('email').notNull().default(''),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
 });
 

@@ -47,7 +47,7 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 - [x] API endpoint: `POST /api/auth/change-password`
 - [x] Páginas: `/login`, redirect `/` → `/login`
 - [x] Recuperación offline: `POST /api/auth/reset-request`, `POST /api/auth/reset-password`, páginas `/login/recuperar` y `/login/recuperar/[token]`
-- [ ] **Unit tests** para `auth.ts` (hash, verify, token generation/validation)
+- [x] **Unit tests** para `auth.ts` (hash, verify, token generation/validation)
 
 ---
 
@@ -89,7 +89,7 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 - [x] Página `/notas` — registro paginado con búsqueda
 - [x] Página `/notas/[id]/editar`
 - [x] Componente `NotasList.tsx` — tabla con estado Vigente/Nula (nulas tachadas)
-- [ ] **Unit tests** para lógica del contador atómico y validaciones
+- [x] **Unit tests** para lógica del contador atómico y validaciones
 
 ---
 
@@ -134,12 +134,12 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 ## Fase 9 — Tests de integración
 > Estimado: sesión 12
 
-- [ ] Configurar Vitest (`vitest.config.ts`)
-- [ ] `POST /api/auth/login` — credenciales correctas, incorrectas, usuario inactivo
-- [ ] `POST /api/notas` — crear nota, validaciones, incremento del contador
-- [ ] `PUT /api/notas/[id]/estado` — solo admin puede anular
-- [ ] `POST /api/vehiculos/import-csv` — formato válido, duplicados, formato inválido
-- [ ] `PUT /api/config` — solo admin, doble confirmación del contador
+- [x] Configurar Vitest (`vitest.config.ts`)
+- [x] `POST /api/auth/login` — credenciales correctas, incorrectas, usuario inactivo
+- [x] `POST /api/notas` — crear nota, validaciones, incremento del contador
+- [x] `PUT /api/notas/[id]/estado` — solo admin puede anular
+- [x] `POST /api/vehiculos/import-csv` — formato válido, duplicados, formato inválido
+- [x] `PUT /api/config` — solo admin, doble confirmación del contador
 - [ ] Objetivo: **80% coverage** en `src/lib/`
 
 ---
@@ -161,19 +161,19 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 ## Fase 11 — Scripts y despliegue local
 > Estimado: sesión 14
 
-- [ ] `scripts/setup.bat` — instalación Windows (Node 22 LTS, npm install, db:push, db:seed, build)
-- [ ] `scripts/setup.sh` — instalación Linux/servidor
-- [ ] `scripts/start.bat` — arranca servidor + abre navegador
-- [ ] `scripts/backup-db.bat` y `scripts/backup-db.sh`
-- [ ] `scripts/migrate-db.sh` — copiar BD a servidor remoto
-- [ ] `scripts/check.bat` — CI local (lint + test:coverage + build)
+- [x] `scripts/setup.bat` — instalación Windows (Node 22 LTS, npm install, db:push, db:seed, build)
+- [x] `scripts/setup.sh` — instalación Linux/servidor
+- [x] `scripts/start.bat` — arranca servidor + abre navegador
+- [x] `scripts/backup-db.bat` y `scripts/backup-db.sh`
+- [x] `scripts/migrate-db.sh` — copiar BD a servidor remoto
+- [x] `scripts/check.bat` — CI local (lint + test:coverage + build)
 
 ---
 
 ## Fase 12 — Documentación y cierre
 > Estimado: sesión 15
 
-- [ ] `README.md` completo:
+- [x] `README.md` completo:
   - Requisitos (Windows 10/11, Node 22)
   - Instalación (setup.bat como administrador)
   - Cómo arrancar
@@ -181,7 +181,7 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
   - Backup manual de BD
   - Migración a servidor
   - FAQ (puerto ocupado, reiniciar, ubicación BD)
-- [ ] Revisión final de seguridad (inputs validados con zod, sanitización, CSRF)
+- [x] Revisión final de seguridad (admin guards en endpoints de catálogos, prepared statements, SameSite cookies)
 - [ ] Prueba completa end-to-end manual en Windows
 
 ---

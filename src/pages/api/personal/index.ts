@@ -26,12 +26,17 @@ export const GET: APIRoute = async ({ url }) => {
   });
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  if (locals.user?.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Solo admin puede modificar personal' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const body = await request.json();
   const { action } = body;
 
   if (action === 'create') {
-    const { ci, nombre, apellido, cargo } = body;
+    const { ci, nombre, apellido, cargo, email } = body;
     if (!ci?.trim() || !nombre?.trim()) {
       return new Response(JSON.stringify({ error: 'C.I. y nombre requeridos' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
@@ -41,6 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
       db.insert(personal).values({
         ci: ci.trim(), nombre: nombre.trim(),
         apellido: apellido?.trim() || '', cargo: cargo?.trim() || '',
+        email: email?.trim() || '',
       }).run();
     } catch {
       return new Response(JSON.stringify({ error: 'Ya existe una persona con esa C.I.' }), {
@@ -53,12 +59,13 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   if (action === 'update') {
-    const { id, ci, nombre, apellido, cargo } = body;
+    const { id, ci, nombre, apellido, cargo, email } = body;
     const updates: Record<string, string> = {};
     if (ci !== undefined) updates.ci = ci;
     if (nombre !== undefined) updates.nombre = nombre;
     if (apellido !== undefined) updates.apellido = apellido;
     if (cargo !== undefined) updates.cargo = cargo;
+    if (email !== undefined) updates.email = email;
     if (Object.keys(updates).length > 0) {
       db.update(personal).set(updates).where(eq(personal.id, id)).run();
     }

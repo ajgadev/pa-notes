@@ -16,8 +16,9 @@ import AdminCrud from '../../components/AdminCrud';
       { key: 'nombre', label: 'Nombre' },
       { key: 'apellido', label: 'Apellido' },
       { key: 'cargo', label: 'Cargo' },
+      { key: 'email', label: 'Email' },
     ]}
-    csvFormat="ci,nombre,apellido,cargo"
+    csvFormat="ci,nombre,apellido,cargo,email"
     csvImportUrl="/api/personal/import-csv"
   />
 </AppLayout>
