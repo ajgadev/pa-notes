@@ -1,15 +1,11 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+import DashboardCharts from '../components/DashboardCharts';
 import { db } from '../lib/db';
-import { notas, users, config } from '../lib/schema';
-import { eq, count } from 'drizzle-orm';
+import { config } from '../lib/schema';
+import { eq } from 'drizzle-orm';
 
 const user = Astro.locals.user;
-
-const totalNotas = db.select({ count: count() }).from(notas).get()?.count ?? 0;
-const notasVigentes = db.select({ count: count() }).from(notas).where(eq(notas.estado, 'Vigente')).get()?.count ?? 0;
-const notasNulas = db.select({ count: count() }).from(notas).where(eq(notas.estado, 'Nula')).get()?.count ?? 0;
-const totalUsuarios = db.select({ count: count() }).from(users).get()?.count ?? 0;
 const companyName = db.select().from(config).where(eq(config.key, 'company_name')).get()?.value ?? 'Petro Alianza';
 ---
 
@@ -19,22 +15,5 @@ const companyName = db.select().from(config).where(eq(config.key, 'company_name'
     <p class="text-sm text-gray-500">Bienvenido, {user.username} — {companyName}</p>
   </div>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <div class="rounded-xl border bg-white p-5 shadow-sm">
-      <p class="text-sm text-gray-500">Total Notas</p>
-      <p class="mt-1 text-3xl font-bold text-pa-dark">{totalNotas}</p>
-    </div>
-    <div class="rounded-xl border bg-white p-5 shadow-sm">
-      <p class="text-sm text-gray-500">Vigentes</p>
-      <p class="mt-1 text-3xl font-bold text-green-600">{notasVigentes}</p>
-    </div>
-    <div class="rounded-xl border bg-white p-5 shadow-sm">
-      <p class="text-sm text-gray-500">Nulas</p>
-      <p class="mt-1 text-3xl font-bold text-red-500">{notasNulas}</p>
-    </div>
-    <div class="rounded-xl border bg-white p-5 shadow-sm">
-      <p class="text-sm text-gray-500">Usuarios</p>
-      <p class="mt-1 text-3xl font-bold text-pa-dark">{totalUsuarios}</p>
-    </div>
-  </div>
+  <DashboardCharts client:load />
 </AppLayout>

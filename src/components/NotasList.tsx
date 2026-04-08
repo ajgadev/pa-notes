@@ -167,7 +167,7 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
                           <a href={`/notas/${n.id}/editar`} className="rounded border border-pa-orange px-2.5 py-1 text-xs font-medium text-pa-orange hover:bg-pa-orange hover:text-white">Editar</a>
                         )}
                         <button onClick={() => exportPdf(n.id)} className="rounded border border-pa-dark px-2.5 py-1 text-xs font-medium text-pa-dark hover:bg-pa-dark hover:text-white">PDF</button>
-                        {isAdmin && !isNula && (
+                        {isAdmin && (
                           <button
                             onClick={() => toggleEstado(n.id, n.estado)}
                             className={`rounded border px-2.5 py-1 text-xs font-medium ${isNula ? 'border-green-400 text-green-600 hover:bg-green-500 hover:text-white' : 'border-red-400 text-red-500 hover:bg-red-500 hover:text-white'}`}
