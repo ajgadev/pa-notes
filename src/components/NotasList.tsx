@@ -8,6 +8,7 @@ interface Nota {
   estado: 'Vigente' | 'Nula';
   departamento: string;
   fecha: string | null;
+  pozo: string;
   tipoSalida: string;
   solicitante: string;
   destino: string;
@@ -20,12 +21,13 @@ interface Props {
   notaPrefix?: string;
 }
 
-type SortKey = 'numero' | 'estado' | 'departamento' | 'tipoSalida' | 'solicitante' | 'destino' | 'fecha';
+type SortKey = 'numero' | 'estado' | 'departamento' | 'pozo' | 'tipoSalida' | 'solicitante' | 'destino' | 'fecha';
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'numero', label: 'N°' },
   { key: 'estado', label: 'Estado' },
   { key: 'departamento', label: 'Departamento' },
+  { key: 'pozo', label: 'Pozo' },
   { key: 'tipoSalida', label: 'Tipo' },
   { key: 'solicitante', label: 'Solicitante' },
   { key: 'destino', label: 'Destino' },
@@ -134,44 +136,50 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Cargando...</td></tr>
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No hay notas</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No hay notas</td></tr>
             ) : (
-              paginated.map((n, i) => (
-                <tr
-                  key={n.id}
-                  className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${n.estado === 'Nula' ? 'line-through opacity-50' : ''}`}
-                >
-                  <td className="px-4 py-2 font-mono font-bold">{formatNotaNumero(n.numero, notaPrefix)}</td>
-                  <td className="px-4 py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      n.estado === 'Vigente' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {n.estado}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">{n.departamento}</td>
-                  <td className="px-4 py-2">{n.tipoSalida}</td>
-                  <td className="px-4 py-2">{n.solicitante}</td>
-                  <td className="px-4 py-2">{n.destino}</td>
-                  <td className="px-4 py-2 text-gray-500">{formatDate(n.fecha) || formatDate(n.createdAt)}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex gap-1.5">
-                      <a href={`/notas/${n.id}/editar`} className="rounded border border-pa-orange px-2.5 py-1 text-xs font-medium text-pa-orange hover:bg-pa-orange hover:text-white">Editar</a>
-                      <button onClick={() => exportPdf(n.id)} className="rounded border border-pa-dark px-2.5 py-1 text-xs font-medium text-pa-dark hover:bg-pa-dark hover:text-white">PDF</button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => toggleEstado(n.id, n.estado)}
-                          className={`rounded border px-2.5 py-1 text-xs font-medium ${n.estado === 'Vigente' ? 'border-red-400 text-red-500 hover:bg-red-500 hover:text-white' : 'border-green-400 text-green-600 hover:bg-green-500 hover:text-white'}`}
-                        >
-                          {n.estado === 'Vigente' ? 'Anular' : 'Restaurar'}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+              paginated.map((n, i) => {
+                const isNula = n.estado === 'Nula';
+                return (
+                  <tr
+                    key={n.id}
+                    className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isNula ? 'text-gray-400' : ''}`}
+                  >
+                    <td className="px-4 py-2 font-mono font-bold">{formatNotaNumero(n.numero, notaPrefix)}</td>
+                    <td className="px-4 py-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        n.estado === 'Vigente' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {n.estado}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">{n.departamento}</td>
+                    <td className="px-4 py-2">{n.pozo || ''}</td>
+                    <td className="px-4 py-2">{n.tipoSalida}</td>
+                    <td className="px-4 py-2">{n.solicitante}</td>
+                    <td className="px-4 py-2">{n.destino}</td>
+                    <td className="px-4 py-2 text-gray-500">{n.fecha ? formatDate(n.fecha) : ''}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex gap-1.5">
+                        {!isNula && (
+                          <a href={`/notas/${n.id}/editar`} className="rounded border border-pa-orange px-2.5 py-1 text-xs font-medium text-pa-orange hover:bg-pa-orange hover:text-white">Editar</a>
+                        )}
+                        <button onClick={() => exportPdf(n.id)} className="rounded border border-pa-dark px-2.5 py-1 text-xs font-medium text-pa-dark hover:bg-pa-dark hover:text-white">PDF</button>
+                        {isAdmin && !isNula && (
+                          <button
+                            onClick={() => toggleEstado(n.id, n.estado)}
+                            className={`rounded border px-2.5 py-1 text-xs font-medium ${isNula ? 'border-green-400 text-green-600 hover:bg-green-500 hover:text-white' : 'border-red-400 text-red-500 hover:bg-red-500 hover:text-white'}`}
+                          >
+                            {isNula ? 'Restaurar' : 'Anular'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

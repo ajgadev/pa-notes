@@ -16,7 +16,8 @@ export const GET: APIRoute = async ({ url }) => {
         String(n.numero).includes(search) ||
         n.departamento?.toLowerCase().includes(search.toLowerCase()) ||
         n.solicitante.toLowerCase().includes(search.toLowerCase()) ||
-        n.destino.toLowerCase().includes(search.toLowerCase())
+        n.destino.toLowerCase().includes(search.toLowerCase()) ||
+        n.pozo?.toLowerCase().includes(search.toLowerCase())
       )
     : query.all();
 
