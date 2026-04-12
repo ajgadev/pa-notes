@@ -87,6 +87,63 @@ El sistema se abrira automaticamente en el navegador en **http://localhost:4321*
 - **Configuracion** — Nombre de empresa, prefijo y contador de notas
 - **Recuperacion de contrasena** — Sistema offline con token de 6 digitos
 
+## Despliegue en servidor (Hetzner / VPS)
+
+Para desplegar en un servidor Ubuntu con HTTPS gratuito:
+
+### 1. Obtener dominio gratis (opcional, para HTTPS)
+
+1. Ir a [duckdns.org](https://www.duckdns.org) e iniciar sesion con Google/GitHub
+2. Crear un subdominio (ej. `petroalianza` → `petroalianza.duckdns.org`)
+3. Apuntar el IP del servidor
+
+### 2. Desplegar
+
+```bash
+# Solo HTTP (sin dominio)
+./scripts/deploy.sh <ip-del-servidor>
+
+# Con HTTPS (con dominio)
+./scripts/deploy.sh <ip-del-servidor> petroalianza.duckdns.org
+```
+
+El script sube el proyecto, instala Node.js, Caddy (proxy reverso), compila la app, y la registra como servicio del sistema.
+
+### 3. Firewall
+
+El servidor necesita los puertos 80 y 443 abiertos:
+
+```bash
+ssh root@<ip> "ufw allow 80 && ufw allow 443 && ufw reload"
+```
+
+Si usa Hetzner Cloud Firewall, agregar reglas TCP 80 y 443 desde la consola web.
+
+### 4. Comandos utiles en el servidor
+
+```bash
+systemctl status pa-notas      # estado de la app
+systemctl restart pa-notas     # reiniciar app
+journalctl -u pa-notas -f      # logs del sistema
+tail -f /opt/pa-notas/data/logs/app.log  # logs de la app
+```
+
+### 5. Re-desplegar (actualizar)
+
+Ejecutar el mismo comando de deploy. La base de datos se preserva automaticamente.
+
+## Logs
+
+La aplicacion escribe logs en `data/logs/app.log`. Se registran:
+
+- Todas las peticiones a la API (metodo, ruta, usuario, status, tiempo)
+- Inicios de sesion exitosos y fallidos
+- Creacion de notas
+- Cambios de estado (anular/restaurar)
+- Intentos de acceso no autorizado
+
+Los archivos se rotan automaticamente al llegar a 5 MB (se mantienen hasta 5 archivos historicos).
+
 ## Backup de la base de datos
 
 La base de datos se encuentra en `data/petroalianza.db`. Para hacer un backup:

@@ -57,6 +57,9 @@ echo ""
 echo "[3/6] Setting up app directory..."
 id -u $APP_USER &>/dev/null || useradd --system --no-create-home --shell /bin/false $APP_USER
 
+# Stop app before copying to prevent DB corruption
+systemctl stop pa-notas 2>/dev/null || true
+
 # Preserve existing database and logs
 if [ -d "$APP_DIR/data" ]; then
   cp -r "$APP_DIR/data" /tmp/pa-notas-data-backup

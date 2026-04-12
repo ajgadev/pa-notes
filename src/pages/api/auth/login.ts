@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   cookies.set('token', token, {
     httpOnly: true,
     sameSite: 'strict',
-    secure: request.url.startsWith('https'),
+    secure: request.headers.get('x-forwarded-proto') === 'https' || request.url.startsWith('https'),
     path: '/',
     maxAge: 60 * 60 * 8, // 8 hours
   });

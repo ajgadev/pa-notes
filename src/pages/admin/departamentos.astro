@@ -12,5 +12,7 @@ import AdminCrud from '../../components/AdminCrud';
     title="Departamentos"
     apiUrl="/api/departamentos?all=1"
     columns={[{ key: 'name', label: 'Nombre' }]}
+    csvFormat="nombre"
+    csvImportUrl="/api/departamentos/import-csv"
   />
 </AppLayout>

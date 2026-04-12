@@ -64,8 +64,8 @@ export default function DashboardCharts() {
   return (
     <div className="space-y-6">
       {/* Date range picker */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4 shadow-sm">
-        <span className="text-sm font-medium text-gray-600">Rango de fechas:</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-3 shadow-sm sm:gap-3 sm:p-4">
+        <span className="text-sm font-medium text-gray-600">Rango:</span>
         <input
           type="date"
           value={range.from}
@@ -106,7 +106,7 @@ export default function DashboardCharts() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Notas en rango</p>
           <p className="mt-1 text-3xl font-bold text-pa-dark">{stats.totals.notas}</p>
