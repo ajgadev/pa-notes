@@ -1,4 +1,7 @@
 @echo off
+:: Navigate to project root (parent of scripts folder)
+cd /d "%~dp0.."
+
 echo ============================================
 echo   PetroAlianza - Actualizar Sistema
 echo ============================================

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../../lib/db';
 import { notas } from '../../../../lib/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from '../../../../lib/logger';
 
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   if (locals.user.role !== 'admin') {
@@ -31,6 +32,8 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 
   db.update(notas).set({ estado }).where(eq(notas.id, id)).run();
+
+  logger.info(`Nota ${estado === 'Nula' ? 'anulada' : 'restaurada'}`, { notaId: id, numero: existing.numero, user: locals.user.username });
 
   return new Response(JSON.stringify({ success: true, estado }), {
     headers: { 'Content-Type': 'application/json' },

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { db, sqlite } from '../../../lib/db';
 import { notas, notaItems, config } from '../../../lib/schema';
 import { desc } from 'drizzle-orm';
+import { logger } from '../../../lib/logger';
 
 export const GET: APIRoute = async ({ url }) => {
   const page = parseInt(url.searchParams.get('page') || '1');
@@ -104,11 +105,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     const result = createNota();
+    logger.info('Nota created', { id: result.id, numero: result.numero, user: user.username });
     return new Response(JSON.stringify({ success: true, ...result }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
+    logger.error('Nota creation failed', { error: err.message, user: user.username });
     return new Response(JSON.stringify({ error: err.message || 'Error al crear nota' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
