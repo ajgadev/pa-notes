@@ -4,14 +4,16 @@ import { users } from '../../../lib/schema';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from '../../../lib/auth';
 import { audit } from '../../../lib/audit';
+import { validatePassword } from '../../../lib/password-policy';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
   const body = await request.json();
   const { newPassword } = body;
 
-  if (!newPassword || newPassword.length < 8) {
-    return new Response(JSON.stringify({ error: 'La contraseña debe tener al menos 8 caracteres' }), {
+  const err = validatePassword(newPassword);
+  if (err) {
+    return new Response(JSON.stringify({ error: err }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
