@@ -3,6 +3,7 @@ import { db } from '../../../../lib/db';
 import { notas } from '../../../../lib/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '../../../../lib/logger';
+import { audit } from '../../../../lib/audit';
 
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   if (locals.user.role !== 'admin') {
@@ -33,7 +34,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
   db.update(notas).set({ estado }).where(eq(notas.id, id)).run();
 
+  const action = estado === 'Nula' ? 'nota_anulada' : 'nota_restaurada';
   logger.info(`Nota ${estado === 'Nula' ? 'anulada' : 'restaurada'}`, { notaId: id, numero: existing.numero, user: locals.user.username });
+  audit({ userId: locals.user.userId, username: locals.user.username, action, target: `nota#${existing.numero}` });
 
   return new Response(JSON.stringify({ success: true, estado }), {
     headers: { 'Content-Type': 'application/json' },

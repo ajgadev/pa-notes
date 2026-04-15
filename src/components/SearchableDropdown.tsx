@@ -15,9 +15,11 @@ interface Props {
   mapOptions: (items: any[]) => Option[];
   placeholder?: string;
   required?: boolean;
+  onCreateNew?: () => void;
+  createLabel?: string;
 }
 
-export default function SearchableDropdown({ label, name, value, onChange, fetchUrl, mapOptions, placeholder, required }: Props) {
+export default function SearchableDropdown({ label, name, value, onChange, fetchUrl, mapOptions, placeholder, required, onCreateNew, createLabel }: Props) {
   const [query, setQuery] = useState(value);
   const [options, setOptions] = useState<Option[]>([]);
   const [open, setOpen] = useState(false);
@@ -99,8 +101,17 @@ export default function SearchableDropdown({ label, name, value, onChange, fetch
       {open && (
         <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
           {loading && <div className="px-3 py-2 text-xs text-gray-400">Buscando...</div>}
-          {!loading && options.length === 0 && (
+          {!loading && options.length === 0 && !onCreateNew && (
             <div className="px-3 py-2 text-xs text-gray-400">Sin resultados</div>
+          )}
+          {!loading && options.length === 0 && onCreateNew && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onCreateNew(); }}
+              className="w-full px-3 py-2 text-left text-xs font-medium text-pa-orange hover:bg-pa-orange/10"
+            >
+              + {createLabel || 'Crear nuevo'}
+            </button>
           )}
           {options.map((opt, i) => (
             <button

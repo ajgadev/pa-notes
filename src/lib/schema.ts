@@ -8,6 +8,7 @@ export const users = sqliteTable('users', {
   role: text('role', { enum: ['admin', 'operador'] }).notNull().default('operador'),
   email: text('email').notNull().default(''),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
 
@@ -89,4 +90,15 @@ export const notaItems = sqliteTable('nota_items', {
 export const config = sqliteTable('config', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
+});
+
+export const auditLog = sqliteTable('audit_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id'),
+  username: text('username').notNull(),
+  action: text('action').notNull(),
+  target: text('target'),
+  detail: text('detail'),
+  ip: text('ip'),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });

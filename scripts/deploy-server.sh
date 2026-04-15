@@ -13,6 +13,7 @@ APP_USER="pa-notas"
 NODE_VERSION="24"
 PORT=4321
 DOMAIN="${1:-}"
+DB_FILE="$APP_DIR/data/petroalianza.db"
 
 echo "============================================"
 echo "  PetroAlianza - Server Deployment"
@@ -28,7 +29,7 @@ fi
 # 0. Install basic tools
 echo "[0/6] Installing prerequisites..."
 apt-get update -qq
-apt-get install -y -qq unzip curl > /dev/null
+apt-get install -y -qq unzip curl sqlite3 > /dev/null
 echo "[OK] Prerequisites ready"
 echo ""
 
@@ -53,44 +54,73 @@ fi
 echo "[OK] Caddy installed"
 echo ""
 
-# 3. Create app user and copy files (preserve data/ if it exists)
+# 3. Stop app and copy files (preserve data/)
 echo "[3/6] Setting up app directory..."
 id -u $APP_USER &>/dev/null || useradd --system --no-create-home --shell /bin/false $APP_USER
 
-# Stop app before copying to prevent DB corruption
+# Stop app completely before touching anything
 systemctl stop pa-notas 2>/dev/null || true
+sleep 1
 
-# Preserve existing database and logs
+# Save existing data directory to a safe location
+BACKUP_DIR=""
 if [ -d "$APP_DIR/data" ]; then
-  cp -r "$APP_DIR/data" /tmp/pa-notas-data-backup
+  BACKUP_DIR="/tmp/pa-notas-data-$(date +%s)"
+  mv "$APP_DIR/data" "$BACKUP_DIR"
+  echo "  Backed up data/ to $BACKUP_DIR"
 fi
 
+# Copy new code
 mkdir -p $APP_DIR
+rm -rf $APP_DIR/src $APP_DIR/dist $APP_DIR/node_modules $APP_DIR/scripts $APP_DIR/public
 cp -r . $APP_DIR/
 
-# Restore preserved data
-if [ -d "/tmp/pa-notas-data-backup" ]; then
-  cp -rn /tmp/pa-notas-data-backup/* $APP_DIR/data/ 2>/dev/null || true
-  rm -rf /tmp/pa-notas-data-backup
+# Restore data directory (overwrite the empty one from the zip)
+if [ -n "$BACKUP_DIR" ]; then
+  rm -rf "$APP_DIR/data"
+  mv "$BACKUP_DIR" "$APP_DIR/data"
+  echo "  Restored data/"
 fi
 
-mkdir -p $APP_DIR/data/logs
+mkdir -p "$APP_DIR/data/logs"
 chown -R $APP_USER:$APP_USER $APP_DIR
-echo "[OK] Files copied to $APP_DIR"
+echo "[OK] Files deployed to $APP_DIR"
 echo ""
 
 # 4. Install dependencies and build
 echo "[4/6] Installing dependencies and building..."
 cd $APP_DIR
 npm install
-npm run db:push
-# Only seed if database is new
-if [ ! -f "$APP_DIR/data/petroalianza.db" ] || [ "$(stat -c%s "$APP_DIR/data/petroalianza.db" 2>/dev/null || echo 0)" -lt 1000 ]; then
+
+# Push schema (safe — only adds missing tables/columns)
+# First try drizzle-kit push; if it fails (e.g. FK constraints), fall back to manual migrations
+npx drizzle-kit push --force || echo "[WARN] drizzle-kit push failed — applying manual migrations"
+
+# Manual idempotent migrations for columns/tables drizzle-kit can't handle
+if [ -f "$DB_FILE" ]; then
+  sqlite3 "$DB_FILE" "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT NOT NULL, action TEXT NOT NULL, target TEXT, detail TEXT, ip TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
+fi
+
+# Only seed on first deploy (no users table or zero users)
+NEEDS_SEED=false
+if [ ! -f "$DB_FILE" ]; then
+  NEEDS_SEED=true
+else
+  USER_COUNT=$(sqlite3 "$DB_FILE" "SELECT count(*) FROM users;" 2>/dev/null || echo "error")
+  if [ "$USER_COUNT" = "error" ] || [ "$USER_COUNT" -eq 0 ]; then
+    NEEDS_SEED=true
+  fi
+fi
+
+if [ "$NEEDS_SEED" = true ]; then
+  echo "  First deploy detected, seeding database..."
   npx tsx src/lib/seed.ts --prod
   echo "[OK] Database seeded (admin / admin123)"
 else
-  echo "[OK] Database already exists, skipping seed"
+  echo "[OK] Database has $USER_COUNT user(s), seed skipped"
 fi
+
 npm run build
 chown -R $APP_USER:$APP_USER $APP_DIR
 echo "[OK] Application built"
@@ -121,8 +151,8 @@ EOF
 
 systemctl daemon-reload
 systemctl enable pa-notas
-systemctl restart pa-notas
-echo "[OK] Service created and started"
+systemctl start pa-notas
+echo "[OK] Service started"
 echo ""
 
 # 6. Configure Caddy
@@ -137,7 +167,7 @@ $DOMAIN {
     }
 }
 CADDYEOF
-  echo "[OK] Caddy configured for $DOMAIN (auto HTTPS via Let's Encrypt)"
+  echo "[OK] Caddy configured for $DOMAIN (auto HTTPS)"
 else
   cat > /etc/caddy/Caddyfile << CADDYEOF
 :80 {
@@ -147,7 +177,16 @@ CADDYEOF
   echo "[OK] Caddy configured for HTTP on $SERVER_IP"
 fi
 
-systemctl restart caddy
+systemctl reload caddy 2>/dev/null || systemctl restart caddy
+echo ""
+
+# Verify app is running
+sleep 2
+if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$PORT/login | grep -q "200"; then
+  echo "[OK] App is responding"
+else
+  echo "[WARN] App may not be ready yet, check: systemctl status pa-notas"
+fi
 echo ""
 
 # Summary
@@ -156,13 +195,9 @@ echo "  Deployment complete!"
 echo ""
 if [ -n "$DOMAIN" ]; then
   echo "  URL: https://$DOMAIN"
-  echo "  (DNS must point to $SERVER_IP)"
 else
   echo "  URL: http://$SERVER_IP"
 fi
-echo ""
-echo "  Login: admin / admin123"
-echo "  CHANGE THE PASSWORD IMMEDIATELY"
 echo ""
 echo "  Commands:"
 echo "    systemctl status pa-notas     # status"

@@ -13,6 +13,12 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
+  if (newPassword.length < 8) {
+    return new Response(JSON.stringify({ error: 'La contraseña debe tener al menos 8 caracteres' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   // Find which user this token belongs to
   const allTokens = db.select().from(config).all()
     .filter(c => c.key.startsWith('reset_token_') && !c.key.includes('expiry') && c.value === token);

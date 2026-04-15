@@ -1,7 +1,7 @@
 import type { APIContext } from 'astro';
 import { verifyToken, type JwtPayload } from './auth';
 
-const PUBLIC_PATHS = ['/', '/login', '/api/auth/login', '/api/auth/reset-request', '/api/auth/reset-password'];
+const PUBLIC_PATHS = ['/', '/login', '/api/auth/login', '/api/auth/reset-request', '/api/auth/reset-password', '/cambiar-clave', '/api/auth/force-change-password'];
 const ADMIN_PREFIXES = ['/admin', '/api/usuarios', '/api/config'];
 
 export function getUser(context: APIContext): JwtPayload | null {

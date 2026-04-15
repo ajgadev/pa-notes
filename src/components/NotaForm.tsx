@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ClearableInput from './ClearableInput';
 import SearchableDropdown from './SearchableDropdown';
 import ItemsTable from './ItemsTable';
+import InlineCreateModal from './InlineCreateModal';
 
 interface NotaItem {
   noParte: string;
@@ -48,7 +49,10 @@ interface Props {
   userProfile: UserProfile;
   initialData?: Partial<NotaData>;
   notaId?: number;
+  isAdmin?: boolean;
 }
+
+type ModalType = 'department' | 'vehicle' | 'personal' | null;
 
 const TIPO_SALIDA_OPTIONS = ['Con Retorno', 'Sin Retorno', 'Inspección', 'Alquiler', 'Otros'];
 
@@ -72,7 +76,7 @@ function mapPersonal(data: any[]) {
   }));
 }
 
-export default function NotaForm({ userProfile, initialData, notaId }: Props) {
+export default function NotaForm({ userProfile, initialData, notaId, isAdmin }: Props) {
   const [form, setForm] = useState<NotaData>({
     departamento: initialData?.departamento ?? '',
     fecha: initialData?.fecha ?? '',
@@ -101,6 +105,7 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [modal, setModal] = useState<ModalType>(null);
 
   const set = (field: keyof NotaData) => (value: string) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -127,7 +132,7 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
       });
       const data = await res.json();
       if (res.ok) {
-        window.location.href = '/notas';
+        window.location.href = '/notas?guardado=1';
       } else {
         setError(data.error || 'Error al guardar');
       }
@@ -151,6 +156,8 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
             fetchUrl="/api/departamentos"
             mapOptions={mapDepartments}
             placeholder="Buscar departamento..."
+            onCreateNew={isAdmin ? () => setModal('department') : undefined}
+            createLabel="Crear departamento"
           />
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">Fecha</label>
@@ -226,6 +233,8 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
             fetchUrl="/api/vehiculos"
             mapOptions={mapVehicles}
             placeholder="Buscar placa..."
+            onCreateNew={isAdmin ? () => setModal('vehicle') : undefined}
+            createLabel="Crear vehículo"
           />
           <ClearableInput label="Marca" name="vMarca" value={form.vMarca} onChange={set('vMarca')} />
           <ClearableInput label="Modelo" name="vModelo" value={form.vModelo} onChange={set('vModelo')} />
@@ -249,6 +258,8 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
               fetchUrl="/api/personal"
               mapOptions={mapPersonal}
               placeholder="Buscar C.I..."
+              onCreateNew={isAdmin ? () => setModal('personal') : undefined}
+              createLabel="Crear persona"
             />
             <ClearableInput label="Nombre" name="cNombre" value={form.cNombre} onChange={set('cNombre')} />
           </div>
@@ -266,6 +277,8 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
               fetchUrl="/api/personal"
               mapOptions={mapPersonal}
               placeholder="Buscar C.I..."
+              onCreateNew={isAdmin ? () => setModal('personal') : undefined}
+              createLabel="Crear persona"
             />
             <ClearableInput label="Nombre" name="gNombre" value={form.gNombre} onChange={set('gNombre')} />
           </div>
@@ -283,6 +296,8 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
               fetchUrl="/api/personal"
               mapOptions={mapPersonal}
               placeholder="Buscar C.I..."
+              onCreateNew={isAdmin ? () => setModal('personal') : undefined}
+              createLabel="Crear persona"
             />
             <ClearableInput label="Nombre" name="sNombre" value={form.sNombre} onChange={set('sNombre')} />
           </div>
@@ -307,6 +322,8 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
               fetchUrl="/api/personal"
               mapOptions={mapPersonal}
               placeholder="Buscar C.I..."
+              onCreateNew={isAdmin ? () => setModal('personal') : undefined}
+              createLabel="Crear persona"
             />
             <ClearableInput label="Nombre" name="aproNombre" value={form.aproNombre} onChange={set('aproNombre')} />
           </div>
@@ -333,6 +350,51 @@ export default function NotaForm({ userProfile, initialData, notaId }: Props) {
           Cancelar
         </a>
       </div>
+
+      {modal === 'department' && (
+        <InlineCreateModal
+          title="Crear Departamento"
+          fields={[{ key: 'name', label: 'Nombre', required: true }]}
+          apiUrl="/api/departamentos"
+          onCreated={(data) => {
+            set('departamento')(data.name || '');
+            setModal(null);
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'vehicle' && (
+        <InlineCreateModal
+          title="Crear Vehículo"
+          fields={[
+            { key: 'placa', label: 'Placa', required: true },
+            { key: 'marca', label: 'Marca', required: true },
+            { key: 'modelo', label: 'Modelo', required: true },
+          ]}
+          apiUrl="/api/vehiculos"
+          onCreated={(data) => {
+            setForm((f) => ({ ...f, vPlaca: data.placa || '', vMarca: data.marca || '', vModelo: data.modelo || '' }));
+            setModal(null);
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'personal' && (
+        <InlineCreateModal
+          title="Crear Persona"
+          fields={[
+            { key: 'ci', label: 'C.I.', required: true },
+            { key: 'nombre', label: 'Nombre', required: true },
+            { key: 'apellido', label: 'Apellido', required: true },
+            { key: 'cargo', label: 'Cargo' },
+          ]}
+          apiUrl="/api/personal"
+          onCreated={() => {
+            setModal(null);
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
     </form>
   );
 }

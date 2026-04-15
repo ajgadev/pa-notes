@@ -72,5 +72,5 @@ const initialData = {
     <p class="text-sm text-gray-500">FO-SF-001 — Autorización de Salida de Materiales y/o Equipos</p>
   </div>
 
-  <NotaForm client:load userProfile={userProfile} initialData={initialData} notaId={id} />
+  <NotaForm client:load userProfile={userProfile} initialData={initialData} notaId={id} isAdmin={user.role === 'admin'} />
 </AppLayout>

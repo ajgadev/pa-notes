@@ -13,8 +13,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  if (newPassword.length < 4) {
-    return new Response(JSON.stringify({ error: 'La nueva contraseña debe tener al menos 4 caracteres' }), {
+  if (newPassword.length < 8) {
+    return new Response(JSON.stringify({ error: 'La nueva contraseña debe tener al menos 8 caracteres' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
   }

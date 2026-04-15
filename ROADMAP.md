@@ -186,6 +186,63 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 
 ---
 
+## Fase 13 — Mejoras de usabilidad (QoL)
+
+- [x] Icono de ojo (show/hide) en todos los campos de contraseña (login, perfil, crear usuario, reset)
+- [x] Crear departamento/vehículo/personal directamente desde el formulario de nota (modal inline, solo admin)
+- [x] Confirmación visual al crear nota exitosamente (toast/redirect con mensaje)
+- [ ] Mejorar feedback de errores en formularios (mensajes inline por campo)
+
+---
+
+## Fase 14 — Permisos granulares
+
+Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistema de permisos por página/acción:
+
+- [ ] Tabla `permissions`: id, nombre, descripción (ej. `notas.create`, `notas.anular`, `admin.usuarios`, `admin.vehiculos`)
+- [ ] Tabla `role_permissions`: role_id → permission_id
+- [ ] Tabla `roles`: id, nombre (ej. `admin`, `operador`, `supervisor`, `auditor`)
+- [ ] UI en admin para crear roles y asignar permisos con checkboxes
+- [ ] Middleware actualizado: verificar permisos específicos en lugar de solo `role === 'admin'`
+- [ ] Roles predefinidos: Admin (todo), Operador (crear/editar notas), Supervisor (ver + anular), Auditor (solo lectura)
+
+---
+
+## Fase 15 — Seguridad avanzada
+
+- [x] Rate limiting en login (máx. 10 intentos por IP en 15 min)
+- [ ] CSRF tokens en formularios
+- [x] Headers de seguridad (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy) via middleware
+- [x] Registro de auditoría: tabla `audit_log` con usuario, acción, entidad, timestamp, IP
+- [ ] Expiración de sesiones inactivas (configurable)
+- [x] Forzar cambio de contraseña en primer login
+- [x] Política de contraseñas (mínimo 8 caracteres en todos los endpoints)
+
+---
+
+## Fase 16 — Notificaciones por email
+
+- [ ] Configuración SMTP en admin (servidor, puerto, usuario, contraseña, remitente)
+- [ ] Email al crear nota: notificar a los firmantes involucrados
+- [ ] Email al anular nota: notificar al creador y firmantes
+- [ ] Email de recuperación de contraseña (reemplazar sistema offline de tokens)
+- [ ] Plantillas de email configurables
+- [ ] Cola de envío con reintentos (tabla `email_queue`)
+
+---
+
+## Fase 17 — Firma digital
+
+- [ ] Canvas de firma táctil (dibujar firma con dedo/mouse)
+- [ ] Guardar firmas como imágenes (PNG) asociadas a cada rol en la nota
+- [ ] Flujo de aprobación: nota pasa por estados (Borrador → Pendiente Firmas → Firmada → Completada)
+- [ ] Cada firmante recibe email/notificación para firmar
+- [ ] Firma incluida en el PDF exportado
+- [ ] Registro de timestamp + IP de cada firma
+- [ ] Opción de firma con PIN (código personal de 4-6 dígitos)
+
+---
+
 ## Futuro — Series de numeración
 
 Reemplazar el sistema actual de prefijo+contador único por un CRUD de **series de numeración** en el admin:

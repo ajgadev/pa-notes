@@ -53,6 +53,11 @@ export const POST: APIRoute = async ({ request }) => {
         status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
+    if (password.length < 8) {
+      return new Response(JSON.stringify({ error: 'La contraseña debe tener al menos 8 caracteres' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     const existing = db.select().from(users).where(eq(users.username, username)).get();
     if (existing) {
@@ -66,6 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
       password: hashPassword(password),
       role: role || 'operador',
       email: email || '',
+      mustChangePassword: true,
     }).returning().get();
 
     db.insert(profiles).values({
@@ -95,7 +101,12 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (action === 'reset-password') {
     const { id, newPassword } = body;
-    db.update(users).set({ password: hashPassword(newPassword) }).where(eq(users.id, id)).run();
+    if (!newPassword || newPassword.length < 8) {
+      return new Response(JSON.stringify({ error: 'La contraseña debe tener al menos 8 caracteres' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    db.update(users).set({ password: hashPassword(newPassword), mustChangePassword: true }).where(eq(users.id, id)).run();
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     });

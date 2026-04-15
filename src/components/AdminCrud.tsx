@@ -197,7 +197,8 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto rounded-xl border bg-white shadow-sm md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-pa-dark text-left text-xs text-white">
@@ -265,36 +266,83 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
         </table>
       </div>
 
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {paginated.length === 0 ? (
+          <p className="py-8 text-center text-gray-400">Sin resultados</p>
+        ) : (
+          paginated.map((item) => (
+            <div key={item.id} className="rounded-xl border bg-white p-4 shadow-sm">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-sm font-medium">
+                  {columns.map((col, ci) => (
+                    <span key={col.key}>
+                      {ci > 0 && <span className="text-gray-300"> · </span>}
+                      {editId === item.id && col.editable !== false ? (
+                        <input
+                          value={editForm[col.key] ?? item[col.key]}
+                          onChange={(e) => setEditForm({ ...editForm, [col.key]: e.target.value })}
+                          className="inline-block w-24 rounded border px-1 py-0.5 text-xs"
+                          placeholder={col.label}
+                        />
+                      ) : (
+                        <span>{item[col.key]}</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {item.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {editId === item.id ? (
+                  <>
+                    <button onClick={() => handleUpdate(item.id)} className="rounded border border-green-400 px-3 py-1.5 text-xs font-medium text-green-600 hover:bg-green-500 hover:text-white">Guardar</button>
+                    <button onClick={() => setEditId(null)} className="rounded border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100">Cancelar</button>
+                  </>
+                ) : (
+                  <button onClick={() => { setEditId(item.id); setEditForm({}); }} className="rounded border border-pa-orange px-3 py-1.5 text-xs font-medium text-pa-orange hover:bg-pa-orange hover:text-white">Editar</button>
+                )}
+                <button onClick={() => toggleActive(item.id, item.active)} className={`rounded border px-3 py-1.5 text-xs font-medium ${item.active ? 'border-red-400 text-red-500 hover:bg-red-500 hover:text-white' : 'border-green-400 text-green-600 hover:bg-green-500 hover:text-white'}`}>
+                  {item.active ? 'Desactivar' : 'Activar'}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500">
         <div className="flex items-center gap-3">
-          <span>{sorted.length} registros en total</span>
+          <span>{sorted.length} registros</span>
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
             className="rounded border px-2 py-1 text-xs"
           >
             {[10, 15, 25, 50, 100].map(n => (
-              <option key={n} value={n}>{n} por página</option>
+              <option key={n} value={n}>{n} por pág.</option>
             ))}
           </select>
         </div>
         {totalPages > 1 && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               className="rounded border px-3 py-1 disabled:opacity-30"
             >
-              Anterior
+              ←
             </button>
-            <span className="px-2 py-1">Página {page} de {totalPages}</span>
+            <span className="px-1 py-1 text-xs">{page}/{totalPages}</span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               className="rounded border px-3 py-1 disabled:opacity-30"
             >
-              Siguiente
+              →
             </button>
           </div>
         )}
