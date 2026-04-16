@@ -92,6 +92,13 @@ echo "[4/6] Installing dependencies and building..."
 cd $APP_DIR
 npm install
 
+# Data-preserving migrations BEFORE drizzle-kit push (idempotent)
+# Merge solicitantes into personal before drizzle-kit drops the obsolete table
+if [ -f "$DB_FILE" ]; then
+  sqlite3 "$DB_FILE" "INSERT OR IGNORE INTO personal (ci, nombre, apellido, cargo, email, active) SELECT ci, nombre, apellido, cargo, email, active FROM solicitantes;" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "DROP TABLE IF EXISTS solicitantes;" 2>/dev/null || true
+fi
+
 # Push schema (safe — only adds missing tables/columns)
 # First try drizzle-kit push; if it fails (e.g. FK constraints), fall back to manual migrations
 npx drizzle-kit push --force || echo "[WARN] drizzle-kit push failed — applying manual migrations"
