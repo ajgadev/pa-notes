@@ -1,19 +1,31 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
-import { personal } from '../../../lib/schema';
+import { personal, profiles } from '../../../lib/schema';
 import { eq } from 'drizzle-orm';
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, locals }) => {
   const q = url.searchParams.get('q') || '';
   const all = url.searchParams.get('all') === '1';
   const base = all
     ? db.select().from(personal).all()
     : db.select().from(personal).where(eq(personal.active, true)).all();
 
+  // For dropdowns (not admin listing), inject current user's profile if missing
+  let list = base;
+  if (!all && locals.user) {
+    const prof = db.select().from(profiles).where(eq(profiles.userId, locals.user.userId)).get();
+    if (prof?.ci && prof.nombre && !base.some((p) => p.ci === prof.ci)) {
+      list = [
+        { id: -1, ci: prof.ci, nombre: prof.nombre, apellido: prof.apellido, cargo: '', email: '', active: true },
+        ...base,
+      ];
+    }
+  }
+
   if (q) {
     const lower = q.toLowerCase();
     return new Response(JSON.stringify(
-      base.filter((p) =>
+      list.filter((p) =>
         p.ci.toLowerCase().includes(lower) ||
         p.nombre.toLowerCase().includes(lower) ||
         p.apellido.toLowerCase().includes(lower)
@@ -21,7 +33,7 @@ export const GET: APIRoute = async ({ url }) => {
     ), { headers: { 'Content-Type': 'application/json' } });
   }
 
-  return new Response(JSON.stringify(base), {
+  return new Response(JSON.stringify(list), {
     headers: { 'Content-Type': 'application/json' },
   });
 };

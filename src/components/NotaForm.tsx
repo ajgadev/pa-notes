@@ -76,6 +76,13 @@ function mapPersonal(data: any[]) {
   }));
 }
 
+function mapPersonalAsName(data: any[]) {
+  return data.map((p) => ({
+    label: `${p.ci} — ${p.nombre} ${p.apellido}`,
+    value: `${p.nombre} ${p.apellido}`.trim(),
+  }));
+}
+
 export default function NotaForm({ userProfile, initialData, notaId, isAdmin }: Props) {
   const [form, setForm] = useState<NotaData>({
     departamento: initialData?.departamento ?? '',
@@ -204,7 +211,18 @@ export default function NotaForm({ userProfile, initialData, notaId, isAdmin }: 
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <ClearableInput label="Solicitado por" name="solicitante" value={form.solicitante} onChange={set('solicitante')} required />
+          <SearchableDropdown
+            label="Solicitado por"
+            name="solicitante"
+            value={form.solicitante}
+            onChange={(val) => set('solicitante')(val)}
+            fetchUrl="/api/personal"
+            mapOptions={mapPersonalAsName}
+            placeholder="Buscar por C.I., nombre o apellido..."
+            onCreateNew={isAdmin ? () => setModal('personal') : undefined}
+            createLabel="Crear persona"
+            required
+          />
           <ClearableInput label="Razón y Destino" name="destino" value={form.destino} onChange={set('destino')} required />
         </div>
       </div>
@@ -305,7 +323,19 @@ export default function NotaForm({ userProfile, initialData, notaId, isAdmin }: 
           {/* Elaborado por */}
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-500">Elaborado por</p>
-            <ClearableInput label="C.I." name="elabCi" value={form.elabCi} onChange={set('elabCi')} />
+            <SearchableDropdown
+              label="C.I."
+              name="elabCi"
+              value={form.elabCi}
+              onChange={(val, data) => {
+                setForm((f) => ({ ...f, elabCi: val, elabNombre: (data?.nombre as string) ?? f.elabNombre }));
+              }}
+              fetchUrl="/api/personal"
+              mapOptions={mapPersonal}
+              placeholder="Buscar C.I..."
+              onCreateNew={isAdmin ? () => setModal('personal') : undefined}
+              createLabel="Crear persona"
+            />
             <ClearableInput label="Nombre" name="elabNombre" value={form.elabNombre} onChange={set('elabNombre')} />
           </div>
 

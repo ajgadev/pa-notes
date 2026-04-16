@@ -195,6 +195,17 @@ Sistema web interno para digitalizar el formulario de Autorización de Salida de
 
 ---
 
+## Fase 18 — Catálogo de solicitantes (revertida — consolidada con Personal)
+
+Se revirtió la separación: los "solicitantes" se unifican en la tabla `personal`, ya que el schema era idéntico y la distinción no aportaba valor operativo. Ahora todos los dropdowns (firmas + "Solicitado por") usan el mismo catálogo.
+
+- [x] Eliminar schema `solicitantes`, API, página de admin y link de navegación
+- [x] `NotaForm`: "Solicitado por" usa `/api/personal`
+- [x] "Elaborado por" convertido a `SearchableDropdown` (antes era `ClearableInput`)
+- [x] Script de migración `scripts/merge-solicitantes.ts` (idempotente: copia filas existentes a `personal` y elimina la tabla)
+
+---
+
 ## Fase 14 — Permisos granulares
 
 Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistema de permisos por página/acción:
@@ -240,6 +251,30 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 - [ ] Firma incluida en el PDF exportado
 - [ ] Registro de timestamp + IP de cada firma
 - [ ] Opción de firma con PIN (código personal de 4-6 dígitos)
+
+---
+
+## Futuro — Unificación de idioma (schema + API en inglés)
+
+Actualmente el código mezcla inglés (infra: `users`, `departments`, `active`, `createdAt`) con español (dominio: `personal`, `notas`, `nombre`, `apellido`, `placa`). Para facilitar mantenimiento futuro por desarrolladores externos:
+
+- [ ] Migrar nombres de tabla restantes a inglés (`personal` → `staff`, `notas` → `notes`, `nota_items` → `note_items`)
+- [ ] Migrar columnas de dominio a inglés (`nombre` → `firstName`, `apellido` → `lastName`, `ci` → `idNumber`, `placa` → `plate`, `pozo` → `well`, etc.)
+- [ ] Renombrar endpoints de API (`/api/personal` → `/api/staff`, `/api/notas` → `/api/notes`, etc.)
+- [ ] Script de migración Drizzle con renombrado seguro + backup previo
+- [ ] Mantener textos visibles al usuario en español (labels, mensajes) — separado vía i18n (ver siguiente fase)
+
+---
+
+## Futuro — Internacionalización (i18n)
+
+Preparar la UI para múltiples idiomas (ES por defecto, EN como segundo):
+
+- [ ] Integrar librería i18n compatible con Astro (ej. `astro-i18n` o `@astrojs/i18n`)
+- [ ] Extraer todos los strings visibles a archivos de traducción (`locales/es.json`, `locales/en.json`)
+- [ ] Selector de idioma en topbar (persistido en cookie/perfil de usuario)
+- [ ] Traducir labels del formulario FO-SF-001 manteniendo el PDF en español (formato oficial)
+- [ ] Formato de fechas/números según locale
 
 ---
 

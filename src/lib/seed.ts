@@ -123,6 +123,9 @@ function seed() {
       { ci: 'V-34567890', nombre: 'José', apellido: 'Martínez', cargo: 'Supervisor de Operaciones' },
       { ci: 'V-45678901', nombre: 'Ana', apellido: 'López', cargo: 'Coordinadora de Logística' },
       { ci: 'V-56789012', nombre: 'Pedro', apellido: 'Hernández', cargo: 'Conductor' },
+      { ci: 'V-67890123', nombre: 'Luis', apellido: 'Pérez', cargo: 'Jefe de Almacén' },
+      { ci: 'V-78901234', nombre: 'Sofía', apellido: 'Ramírez', cargo: 'Coordinadora de Compras' },
+      { ci: 'V-89012345', nombre: 'Miguel', apellido: 'Díaz', cargo: 'Supervisor de Mantenimiento' },
     ];
     for (const p of people) {
       db.insert(schema.personal).values(p).onConflictDoNothing().run();

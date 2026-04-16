@@ -26,9 +26,12 @@ export default function SearchableDropdown({ label, name, value, onChange, fetch
   const [loading, setLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const queryRef = useRef(value);
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     setQuery(value);
+    queryRef.current = value;
   }, [value]);
 
   useEffect(() => {
@@ -42,33 +45,36 @@ export default function SearchableDropdown({ label, name, value, onChange, fetch
   }, []);
 
   const fetchOptions = async (q: string) => {
+    const reqId = ++reqIdRef.current;
     setLoading(true);
     try {
       const res = await fetch(`${fetchUrl}?q=${encodeURIComponent(q)}`);
       const data = await res.json();
-      setOptions(mapOptions(data));
+      if (reqId === reqIdRef.current) setOptions(mapOptions(data));
     } catch {
-      setOptions([]);
+      if (reqId === reqIdRef.current) setOptions([]);
     }
-    setLoading(false);
+    if (reqId === reqIdRef.current) setLoading(false);
   };
 
   const handleInput = (val: string) => {
     setQuery(val);
+    queryRef.current = val;
     onChange(val);
     setOpen(true);
     fetchOptions(val);
   };
 
   const handleSelect = (opt: Option) => {
-    setQuery(opt.label);
+    setQuery(opt.value);
+    queryRef.current = opt.value;
     onChange(opt.value, opt.data);
     setOpen(false);
   };
 
   const handleFocus = () => {
     setOpen(true);
-    fetchOptions(query);
+    fetchOptions(queryRef.current);
   };
 
   return (
@@ -90,7 +96,7 @@ export default function SearchableDropdown({ label, name, value, onChange, fetch
         {query && (
           <button
             type="button"
-            onClick={() => { setQuery(''); onChange(''); inputRef.current?.focus(); }}
+            onClick={() => { setQuery(''); queryRef.current = ''; onChange(''); setOpen(true); fetchOptions(''); inputRef.current?.focus(); }}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
             tabIndex={-1}
           >
