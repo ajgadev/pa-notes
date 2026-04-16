@@ -206,6 +206,20 @@ Se revirtió la separación: los "solicitantes" se unifican en la tabla `persona
 
 ---
 
+## Fase 19 — Admin oculto (super-admin invisible)
+
+Cuenta de administrador invisible para el dueño del sistema: mismos permisos que `admin`, pero los admins regulares no pueden verla ni modificarla desde `/admin/usuarios`.
+
+- [ ] Añadir columna `hidden` (boolean, default `false`) a la tabla `users`
+- [ ] `/api/usuarios` GET filtra `hidden=true` de la respuesta
+- [ ] `/api/usuarios` POST (update/toggle/reset) rechaza operaciones sobre usuarios con `hidden=true`
+- [ ] Login y auth sin cambios — el usuario oculto entra como cualquier admin
+- [ ] Script CLI `scripts/create-hidden-admin.ts` — prompt interactivo de username + password (credenciales NO en git/seed)
+- [ ] Migración idempotente en `deploy-server.sh` (`ALTER TABLE users ADD COLUMN hidden ...`)
+- [ ] El admin oculto gestiona su propia cuenta vía `/perfil` (no aparece en listados, ni siquiera para sí mismo)
+
+---
+
 ## Fase 14 — Permisos granulares
 
 Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistema de permisos por página/acción:
