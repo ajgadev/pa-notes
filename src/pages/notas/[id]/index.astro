@@ -1,0 +1,100 @@
+---
+import AppLayout from '../../../layouts/AppLayout.astro';
+import NotaReadOnly from '../../../components/NotaReadOnly';
+import SignatureStatus from '../../../components/SignatureStatus';
+import PdfPreviewButton from '../../../components/PdfPreviewButton';
+import { db } from '../../../lib/db';
+import { notas, notaItems, profiles, config, signatures } from '../../../lib/schema';
+import { eq } from 'drizzle-orm';
+import { formatNotaNumero } from '../../../lib/format';
+import { hasAnySignature } from '../../../lib/signatures';
+
+const user = Astro.locals.user;
+const id = parseInt(Astro.params.id!);
+
+const notaPrefix = db.select().from(config).where(eq(config.key, 'nota_prefix')).get()?.value ?? 'NS';
+const nota = db.select().from(notas).where(eq(notas.id, id)).get();
+if (!nota) {
+  return Astro.redirect('/notas');
+}
+
+const items = db.select().from(notaItems).where(eq(notaItems.notaId, id)).all();
+const sigs = db.select({
+  role: signatures.role,
+  signedByName: signatures.signedByName,
+  signedAt: signatures.signedAt,
+}).from(signatures).where(eq(signatures.notaId, id)).all();
+
+const profile = db.select().from(profiles).where(eq(profiles.userId, user.userId)).get();
+const userCi = profile?.ci ?? '';
+const savedSignature = profile?.savedSignature ?? null;
+const hasSigs = hasAnySignature(id);
+const isNula = nota.estado === 'Nula';
+
+const notaData = {
+  ...nota,
+  departamento: nota.departamento ?? '',
+  pozo: nota.pozo ?? '',
+  taladro: nota.taladro ?? '',
+  vPlaca: nota.vPlaca ?? '',
+  vMarca: nota.vMarca ?? '',
+  vModelo: nota.vModelo ?? '',
+  cNombre: nota.cNombre ?? '',
+  cCi: nota.cCi ?? '',
+  gNombre: nota.gNombre ?? '',
+  gCi: nota.gCi ?? '',
+  sNombre: nota.sNombre ?? '',
+  sCi: nota.sCi ?? '',
+  elabNombre: nota.elabNombre ?? '',
+  elabCi: nota.elabCi ?? '',
+  aproNombre: nota.aproNombre ?? '',
+  aproCi: nota.aproCi ?? '',
+  items: items.map((it) => ({
+    noParte: it.noParte ?? '',
+    unidad: it.unidad,
+    cantidad: it.cantidad,
+    descripcion: it.descripcion,
+    noSerial: it.noSerial ?? '',
+  })),
+  signatures: sigs,
+};
+---
+
+<AppLayout title={`Nota ${formatNotaNumero(nota.numero, notaPrefix)}`}>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Nota {formatNotaNumero(nota.numero, notaPrefix)}</h1>
+      <p class="text-sm text-gray-500">FO-SF-001 — Autorización de Salida de Materiales y/o Equipos</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <PdfPreviewButton client:load notaId={id} username={user.username} notaPrefix={notaPrefix} />
+      {!isNula && !hasSigs && (
+        <a
+          id="edit-nota-btn"
+          href={`/notas/${id}/editar`}
+          class="rounded-lg border border-pa-orange px-4 py-2 text-sm font-medium text-pa-orange hover:bg-pa-orange hover:text-white transition"
+        >
+          Editar
+        </a>
+      )}
+      <a
+        href="/notas"
+        class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+      >
+        Volver
+      </a>
+    </div>
+  </div>
+
+  {hasSigs && !isNula && (
+    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <p class="text-sm text-blue-800">Esta nota tiene firmas registradas y no puede ser editada.</p>
+    </div>
+  )}
+
+  <NotaReadOnly client:load nota={notaData} notaPrefix={notaPrefix} />
+
+  <div class="mt-6">
+    <SignatureStatus client:load notaId={id} userCi={userCi} savedSignature={savedSignature} />
+  </div>
+</AppLayout>

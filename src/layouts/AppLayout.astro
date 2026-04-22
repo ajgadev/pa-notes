@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import NotificationBell from '../components/NotificationBell';
 import { db } from '../lib/db';
 import { profiles } from '../lib/schema';
 import { eq } from 'drizzle-orm';
@@ -43,6 +44,7 @@ const displayName = [profile?.nombre, profile?.apellido].filter(Boolean).join(' 
       </div>
       <div class="flex items-center gap-2 md:gap-4">
         <span class="hidden text-sm text-gray-300 sm:inline">{displayName}</span>
+        <NotificationBell client:load />
         <span class="rounded-full bg-pa-orange/20 px-2 py-0.5 text-xs text-pa-orange">{user?.role}</span>
         <button
           id="logoutBtn"
@@ -62,12 +64,13 @@ const displayName = [profile?.nombre, profile?.apellido].filter(Boolean).join(' 
         <nav class="space-y-1">
           {[
             { href: '/dashboard', label: 'Dashboard', icon: '◉' },
-            { href: '/notas', label: 'Notas', icon: '📋' },
+            { href: '/notas', label: 'Notas', icon: '📋', id: 'nav-notas' },
             { href: '/notas/nueva', label: 'Nueva Nota', icon: '➕' },
             { href: '/perfil', label: 'Mi Perfil', icon: '👤' },
-          ].map(({ href, label, icon }) => (
+          ].map(({ href, label, icon, id }) => (
             <a
               href={href}
+              id={id}
               class:list={[
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition',
                 currentPath === href
@@ -76,7 +79,7 @@ const displayName = [profile?.nombre, profile?.apellido].filter(Boolean).join(' 
               ]}
             >
               <span>{icon}</span>
-              <span>{label}</span>
+              <span class="flex-1">{label}</span>
             </a>
           ))}
 
@@ -141,6 +144,28 @@ const displayName = [profile?.nombre, profile?.apellido].filter(Boolean).join(' 
 
       // Close menu when a link is clicked (mobile)
       sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+
+      // Pending signatures badge
+      function updatePendingBadge() {
+        fetch('/api/notas/pendientes')
+          .then(r => r.json())
+          .then(data => {
+            const navNotas = document.getElementById('nav-notas');
+            if (!navNotas) return;
+            const existing = navNotas.querySelector('[data-pending-badge]');
+            if (existing) existing.remove();
+            if (data.total > 0) {
+              const badge = document.createElement('span');
+              badge.className = 'ml-auto rounded-full bg-yellow-500 text-white px-1.5 py-0.5 text-xs font-bold leading-none';
+              badge.setAttribute('data-pending-badge', '');
+              badge.textContent = String(data.total);
+              navNotas.appendChild(badge);
+            }
+          })
+          .catch(() => {});
+      }
+      updatePendingBadge();
+      window.addEventListener('notas-updated', updatePendingBadge);
     </script>
   </body>
 </html>

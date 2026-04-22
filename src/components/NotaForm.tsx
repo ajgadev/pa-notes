@@ -139,7 +139,12 @@ export default function NotaForm({ userProfile, initialData, notaId, isAdmin }: 
       });
       const data = await res.json();
       if (res.ok) {
-        window.location.href = '/notas?guardado=1';
+        if (data.signatureWarnings?.length > 0) {
+          const params = new URLSearchParams({ guardado: '1', sigWarnings: data.signatureWarnings.join('||') });
+          window.location.href = `/notas?${params}`;
+        } else {
+          window.location.href = '/notas?guardado=1';
+        }
       } else {
         setError(data.error || 'Error al guardar');
       }

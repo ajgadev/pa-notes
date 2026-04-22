@@ -28,14 +28,15 @@ export default function SignatureStatus({ notaId, userCi, savedSignature }: Prop
   const [submitting, setSubmitting] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
-  function loadStatus() {
-    fetch(`/api/notas/${notaId}/firmas`)
-      .then((res) => res.json())
-      .then((data) => {
-        setRoles(data.roles || []);
-        setStatus(data.signatureStatus || '');
-      })
-      .finally(() => setLoading(false));
+  async function loadStatus() {
+    try {
+      const res = await fetch(`/api/notas/${notaId}/firmas`);
+      const data = await res.json();
+      setRoles([...(data.roles || [])]);
+      setStatus(data.signatureStatus || '');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { loadStatus(); }, [notaId]);
@@ -51,7 +52,9 @@ export default function SignatureStatus({ notaId, userCi, savedSignature }: Prop
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setSigningRole(null);
-      loadStatus();
+      await loadStatus();
+      document.getElementById('edit-nota-btn')?.remove();
+      window.dispatchEvent(new CustomEvent('notas-updated'));
     } catch (err: any) {
       alert(err.message || 'Error al firmar');
     } finally {

@@ -19,6 +19,7 @@ export const GET: APIRoute = async ({ params }) => {
     role: signatures.role,
     signedByName: signatures.signedByName,
     signedAt: signatures.signedAt,
+    signatureData: signatures.signatureData,
   }).from(signatures).where(eq(signatures.notaId, id)).all();
 
   return new Response(JSON.stringify({ ...nota, items, signatures: sigs }), {
@@ -26,7 +27,7 @@ export const GET: APIRoute = async ({ params }) => {
   });
 };
 
-export const PUT: APIRoute = async ({ params, request }) => {
+export const PUT: APIRoute = async ({ params, request, url }) => {
   const id = parseInt(params.id!);
   const body = await request.json();
 
@@ -83,7 +84,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     updateNota();
 
     // Regenerate signature tokens for updated signer assignments
-    createSignatureTokens(id, body);
+    const baseUrl = `${url.protocol}//${url.host}`;
+    createSignatureTokens(id, body, baseUrl);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },

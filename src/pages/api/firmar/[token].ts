@@ -5,8 +5,24 @@ import { eq } from 'drizzle-orm';
 import { validateToken, recordSignature, getRoleLabel } from '../../../lib/signatures';
 import { audit } from '../../../lib/audit';
 import { logger } from '../../../lib/logger';
+import { checkRateLimit } from '../../../lib/rate-limit';
 
-export const GET: APIRoute = async ({ params }) => {
+function getClientIp(request: Request): string {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+}
+
+export const GET: APIRoute = async ({ params, request }) => {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`firmar:${ip}`);
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: `Demasiados intentos. Intente de nuevo en ${rl.retryAfterSec}s` }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSec) },
+    });
+  }
+
   const result = validateToken(params.token!);
   if (!result) {
     return new Response(JSON.stringify({ error: 'Enlace inválido, expirado o ya utilizado' }), {
@@ -31,6 +47,15 @@ export const GET: APIRoute = async ({ params }) => {
 };
 
 export const POST: APIRoute = async ({ params, request }) => {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`firmar:${ip}`);
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: `Demasiados intentos. Intente de nuevo en ${rl.retryAfterSec}s` }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(rl.retryAfterSec) },
+    });
+  }
+
   const tokenStr = params.token!;
   const result = validateToken(tokenStr);
   if (!result) {
@@ -51,9 +76,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     });
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || '';
+  const signIp = ip === 'unknown' ? '' : ip;
 
   const signResult = recordSignature({
     notaId: nota.id,
@@ -61,7 +84,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     signedByName: token.recipientName,
     signedByCi: '', // CI is already on the nota
     signatureData,
-    ip,
+    ip: signIp,
     tokenId: token.id,
   });
 
@@ -84,7 +107,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     action: 'nota_firmada',
     target: `nota#${nota.numero}`,
     detail: `Rol: ${getRoleLabel(token.role as any)} (via token)`,
-    ip,
+    ip: signIp,
   });
 
   return new Response(JSON.stringify({

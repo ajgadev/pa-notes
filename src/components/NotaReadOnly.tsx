@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 interface NotaItem {
   noParte?: string;
   unidad: number;
@@ -13,6 +15,7 @@ interface SignatureInfo {
 }
 
 interface NotaData {
+  id: number;
   numero: number;
   estado: string;
   departamento?: string;
@@ -65,7 +68,27 @@ const ROLE_MAP: Record<string, { label: string; nameField: keyof NotaData; ciFie
 
 export default function NotaReadOnly({ nota, notaPrefix = 'NS' }: Props) {
   const formatNumero = (n: number) => `${notaPrefix}-${String(n).padStart(6, '0')}`;
-  const sigMap = new Map(nota.signatures?.map((s) => [s.role, s]) ?? []);
+  const [sigs, setSigs] = useState<SignatureInfo[]>(nota.signatures ?? []);
+
+  useEffect(() => {
+    function refresh() {
+      fetch(`/api/notas/${nota.id}/firmas`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (!data?.roles) return;
+          setSigs(data.roles.filter((r: any) => r.signed).map((r: any) => ({
+            role: r.role,
+            signedByName: r.signedByName,
+            signedAt: r.signedAt,
+          })));
+        })
+        .catch(() => {});
+    }
+    window.addEventListener('notas-updated', refresh);
+    return () => window.removeEventListener('notas-updated', refresh);
+  }, [nota.id]);
+
+  const sigMap = new Map(sigs.map((s) => [s.role, s]));
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">

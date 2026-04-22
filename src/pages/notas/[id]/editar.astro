@@ -1,7 +1,6 @@
 ---
 import AppLayout from '../../../layouts/AppLayout.astro';
 import NotaForm from '../../../components/NotaForm';
-import SignatureStatus from '../../../components/SignatureStatus';
 import { db } from '../../../lib/db';
 import { notas, notaItems, profiles, config } from '../../../lib/schema';
 import { eq } from 'drizzle-orm';
@@ -17,6 +16,11 @@ if (!nota) {
   return Astro.redirect('/notas');
 }
 
+// Redirect to detail page if nota has signatures (can't edit)
+if (hasAnySignature(id)) {
+  return Astro.redirect(`/notas/${id}`);
+}
+
 const items = db.select().from(notaItems).where(eq(notaItems.notaId, id)).all();
 const profile = db.select().from(profiles).where(eq(profiles.userId, user.userId)).get();
 
@@ -25,10 +29,6 @@ const userProfile = {
   apellido: profile?.apellido ?? '',
   ci: profile?.ci ?? '',
 };
-
-const hasSigs = hasAnySignature(id);
-const userCi = profile?.ci ?? '';
-const savedSignature = profile?.savedSignature ?? null;
 
 // Parse tipoSalida for "Otros: ..." case
 let tipoSalida = nota.tipoSalida;
@@ -78,16 +78,5 @@ const initialData = {
     <p class="text-sm text-gray-500">FO-SF-001 — Autorización de Salida de Materiales y/o Equipos</p>
   </div>
 
-  {hasSigs ? (
-    <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-      <p class="text-sm text-amber-800 font-medium">Esta nota tiene firmas registradas y no puede ser editada.</p>
-      <p class="text-xs text-amber-600 mt-1">Para modificarla, anule esta nota y cree una nueva.</p>
-    </div>
-  ) : (
-    <NotaForm client:load userProfile={userProfile} initialData={initialData} notaId={id} isAdmin={user.role === 'admin'} />
-  )}
-
-  <div class="mt-6">
-    <SignatureStatus client:load notaId={id} userCi={userCi} savedSignature={savedSignature} />
-  </div>
+  <NotaForm client:load userProfile={userProfile} initialData={initialData} notaId={id} isAdmin={user.role === 'admin'} />
 </AppLayout>

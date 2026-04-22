@@ -271,48 +271,57 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 - [x] `PUT /api/notas/[id]/estado` expira tokens al anular nota
 - [x] `GET /api/notas/[id]` incluye firmas en la respuesta
 - [x] Página de edición muestra aviso "nota con firmas, no editable" + panel SignatureStatus
-- [ ] Mostrar `signatureStatus` (borrador/pendiente/completa) como badge en la lista de notas (`NotasList.tsx`)
-- [ ] Advertencias visibles al usuario cuando un firmante no tiene email en tabla `personal`
+- [x] Mostrar `signatureStatus` (borrador/pendiente/completa) como badge en la lista de notas (`NotasList.tsx`)
+- [x] Advertencias visibles al usuario cuando un firmante no tiene email en tabla `personal`
+- [x] Página de detalle `/notas/[id]` — vista de solo lectura con NotaReadOnly + SignatureStatus + firma inline
+- [x] Filas clickeables en lista de notas (desktop + mobile) navegan al detalle
+- [x] Editar redirige al detalle si la nota tiene firmas
+- [x] Botón "Editar" solo visible en detalle si la nota no tiene firmas y no está anulada
 
 ### Sub-fase 16.4 — Notificaciones in-app
 
-- [ ] API `GET /api/notificaciones` — notificaciones del usuario (paginadas, `?unread=1` para conteo)
-- [ ] API `PUT /api/notificaciones` — marcar como leídas (`{ids: []}` o `{all: true}`)
-- [ ] Componente `NotificationBell.tsx` — icono campana + badge conteo, dropdown, poll cada 60s
-- [ ] Agregar NotificationBell en topbar de `AppLayout.astro`
-- [ ] Crear notificación `firma_pendiente` cuando nota se crea con firmantes que tienen cuenta
-- [ ] Crear notificación `firma_recibida` al creador cuando alguien firma
-- [ ] Crear notificación `todas_firmadas` al creador cuando se completan todas las firmas
-- [ ] Vincular personal → usuario por CI (`personal.ci` = `profiles.ci`) para determinar quién recibe notificación
+- [x] API `GET /api/notificaciones` — notificaciones del usuario (paginadas, `?unread=1` para conteo)
+- [x] API `PUT /api/notificaciones` — marcar como leídas (`{ids: []}` o `{all: true}`)
+- [x] Componente `NotificationBell.tsx` — icono campana + badge conteo, dropdown, poll cada 60s
+- [x] Agregar NotificationBell en topbar de `AppLayout.astro`
+- [x] Crear notificación `firma_pendiente` cuando nota se crea con firmantes que tienen cuenta
+- [x] Crear notificación `firma_recibida` al creador cuando alguien firma
+- [x] Crear notificación `todas_firmadas` al creador cuando se completan todas las firmas
+- [x] Vincular personal → usuario por CI (`personal.ci` = `profiles.ci`) para determinar quién recibe notificación
+- [x] Módulo `src/lib/notify.ts` — helpers para crear notificaciones desde eventos de firma
 
 ### Sub-fase 16.5 — Email (SMTP)
 
-- [ ] Instalar `nodemailer` + `@types/nodemailer`
-- [ ] Servicio `src/lib/email.ts`: queueEmail, processEmailQueue, getSmtpConfig, testSmtpConnection
-- [ ] Plantillas `src/lib/email-templates.ts`: signatureRequestTemplate, allSignedTemplate (branding PA)
-- [ ] Worker `src/lib/email-worker.ts`: setInterval cada 30s para procesar cola
-- [ ] API `GET/PUT/POST /api/config/smtp` — admin: guardar config SMTP, probar conexión
-- [ ] Sección SMTP en `AdminConfig.tsx` (host, puerto, usuario, contraseña, remitente, toggle, botón test)
-- [ ] Config keys en DB: smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, smtp_enabled
-- [ ] Enviar email de solicitud de firma al crear nota (si firmante tiene email)
-- [ ] Enviar email al creador cuando todas las firmas están completas
+- [x] Instalar `nodemailer` + `@types/nodemailer`
+- [x] Servicio `src/lib/email.ts`: queueEmail, processEmailQueue, getSmtpConfig, testSmtpConnection
+- [x] Plantillas `src/lib/email-templates.ts`: signatureRequestTemplate, allSignedTemplate (branding PA)
+- [x] Worker `src/lib/email-worker.ts`: setInterval cada 30s para procesar cola
+- [x] API `GET/PUT/POST /api/config/smtp` — admin: guardar config SMTP, probar conexión
+- [x] Sección SMTP en `AdminConfig.tsx` (host, puerto, usuario, contraseña, remitente, toggle, botón test)
+- [x] Config keys en DB: smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, smtp_enabled
+- [x] Enviar email de solicitud de firma al crear nota (si firmante tiene email)
+- [x] Enviar email al creador cuando todas las firmas están completas
 
 ### Sub-fase 16.6 — Vista pendientes + PDF + perfil
 
-- [ ] Tab "Pendientes mi firma" en `NotasList.tsx` (filtra notas donde CI del usuario = firmante sin firma)
-- [ ] API `GET /api/notas/pendientes` — notas pendientes de firma del usuario autenticado
-- [ ] Badge de pendientes en sidebar junto a "Notas"
-- [ ] Embeber imágenes de firma en PDF exportado (`PdfExporter.tsx` — `doc.addImage()`)
-- [ ] Texto "Firmado: {fecha}" bajo cada firma en el PDF
-- [ ] Sección "Mi Firma" en página de perfil (`/perfil`) con SignaturePad para guardar firma reutilizable
-- [ ] Opción "Usar firma guardada" al firmar una nota (pre-llena canvas, requiere submit explícito)
+- [x] Tab "Pendientes mi firma" en `NotasList.tsx` (filtra notas donde CI del usuario = firmante sin firma)
+- [x] API `GET /api/notas/pendientes` — notas pendientes de firma del usuario autenticado
+- [x] Badge de pendientes en sidebar junto a "Notas"
+- [x] Embeber imágenes de firma en PDF exportado (`PdfExporter.tsx` — `doc.addImage()`)
+- [x] Texto "Firmado: {fecha}" bajo cada firma en el PDF
+- [x] Sección "Mi Firma" en página de perfil (`/perfil`) con SignaturePad para guardar firma reutilizable
+- [x] Opción "Usar firma guardada" al firmar una nota (pre-llena canvas, requiere submit explícito)
+- [x] Botón "Vista Previa PDF" + "Descargar" en página de detalle de nota
+- [x] Componente `PdfPreviewButton.tsx` — abre PDF en nueva pestaña del navegador
+- [x] API `GET /api/perfil/firma` + `PUT` + `DELETE` — gestión de firma guardada
+- [x] Componente `SavedSignatureEditor.tsx` — UI para crear/cambiar/eliminar firma en perfil
 
 ### Sub-fase 16.7 — Hardening
 
-- [ ] Rate limiting en `/api/firmar/[token]` (prevenir fuerza bruta)
-- [ ] Validar que signatureData sea PNG válido antes de guardar
-- [ ] Audit logging completo para todos los eventos de firma
-- [ ] Tests de integración para flujo de firma (token, autenticado, bloqueo de edición)
+- [x] Rate limiting en `/api/firmar/[token]` (prevenir fuerza bruta)
+- [x] Validar que signatureData sea PNG válido antes de guardar
+- [x] Audit logging completo para todos los eventos de firma
+- [x] Tests de integración para flujo de firma (token, autenticado, bloqueo de edición)
 
 ### Decisiones de diseño (referencia)
 

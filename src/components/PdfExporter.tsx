@@ -9,6 +9,13 @@ interface NotaItem {
   noSerial: string;
 }
 
+interface SignatureData {
+  role: string;
+  signatureData?: string;
+  signedAt?: string;
+  signedByName?: string;
+}
+
 interface NotaData {
   numero: number;
   estado: string;
@@ -36,6 +43,7 @@ interface NotaData {
   aproCi: string;
   items: NotaItem[];
   createdAt: string;
+  signatures?: SignatureData[];
 }
 
 interface Props {
@@ -147,6 +155,25 @@ async function loadImageAsDataUrl(src: string): Promise<string | null> {
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+function drawSignatureImage(doc: jsPDF, sig: SignatureData | undefined, x: number, y: number, w: number, h: number) {
+  if (!sig?.signatureData) return;
+  try {
+    const pad = 1;
+    const imgW = w - 2 * pad;
+    const imgH = h - 2 * pad - 2;
+    doc.addImage(sig.signatureData, 'PNG', x + pad, y + pad, imgW, imgH);
+    if (sig.signedAt) {
+      const date = new Date(sig.signedAt).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      doc.setFontSize(4);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor('#666666');
+      doc.text(`Firmado: ${date}`, x + pad, y + h - 0.5);
+    }
+  } catch {
+    // Skip if image is invalid
+  }
 }
 
 export async function generatePdf(nota: NotaData, username: string, notaPrefix = 'NS') {
@@ -316,6 +343,7 @@ export async function generatePdf(nota: NotaData, username: string, notaPrefix =
   //   Col4 (L-O): Seguridad Física (full 9)
   const sr = 4; // sub-row height
   const sigY = y;
+  const sigMap = new Map(nota.signatures?.map((s) => [s.role, s]) ?? []);
   const col1x = c[0]; const col1w = c[3] - c[0];
   const col2x = c[3]; const col2w = c[6] - c[3];
   const col3x = c[6]; const col3w = c[11] - c[6];
@@ -332,18 +360,21 @@ export async function generatePdf(nota: NotaData, username: string, notaPrefix =
   drawCell(doc, col1x, sigY + 5 * sr, col1w, sr, `Nombre: ${nota.elabNombre}`, { size: 6 });
   drawCell(doc, col1x, sigY + 6 * sr, col1w, sr, `C.I.: ${nota.elabCi}`, { size: 6 });
   drawCell(doc, col1x, sigY + 7 * sr, col1w, 2 * sr, 'Firma:', { size: 6, vAlign: 'top' });
+  drawSignatureImage(doc, sigMap.get('elaborado'), col1x, sigY + 7 * sr, col1w, 2 * sr);
 
   // --- Column 2: Conductor (rows 0-3) ---
   drawCell(doc, col2x, sigY, col2w, sr, 'Conductor', { bold: true, size: 6.5, align: 'center' });
   drawCell(doc, col2x, sigY + sr, col2w, sr, `Nombre: ${nota.cNombre}`, { size: 6 });
   drawCell(doc, col2x, sigY + 2 * sr, col2w, sr, `C.I.: ${nota.cCi}`, { size: 6 });
   drawCell(doc, col2x, sigY + 3 * sr, col2w, sr, 'Firma:', { size: 6 });
+  drawSignatureImage(doc, sigMap.get('conductor'), col2x, sigY + 3 * sr, col2w, sr);
 
   // --- Column 2: Aprobado Por (rows 4-8) ---
   drawCell(doc, col2x, sigY + 4 * sr, col2w, sr, 'Aprobado Por:', { bold: true, size: 6.5 });
   drawCell(doc, col2x, sigY + 5 * sr, col2w, sr, `Nombre: ${nota.aproNombre}`, { size: 6 });
   drawCell(doc, col2x, sigY + 6 * sr, col2w, sr, `C.I.: ${nota.aproCi}`, { size: 6 });
   drawCell(doc, col2x, sigY + 7 * sr, col2w, 2 * sr, 'Firma:', { size: 6, vAlign: 'top' });
+  drawSignatureImage(doc, sigMap.get('aprobado'), col2x, sigY + 7 * sr, col2w, 2 * sr);
 
   // --- Column 3: Gerente General (rows 0-8) ---
   drawCell(doc, col3x, sigY, col3w, sr, 'Gerente General', { bold: true, size: 6.5, align: 'center' });
@@ -352,6 +383,7 @@ export async function generatePdf(nota: NotaData, username: string, notaPrefix =
   drawCell(doc, col3x, sigY + 2 * sr, col3w, 2 * sr, '', {});
   drawCell(doc, col3x, sigY + 4 * sr, col3w, sr, `C.I.: ${nota.gCi}`, { size: 6 });
   drawCell(doc, col3x, sigY + 5 * sr, col3w, 4 * sr, 'Firma:', { size: 6, vAlign: 'top' });
+  drawSignatureImage(doc, sigMap.get('gerente'), col3x, sigY + 5 * sr, col3w, 4 * sr);
 
   // --- Column 4: Seguridad Física (rows 0-8) ---
   drawCell(doc, col4x, sigY, col4w, sr, 'Seguridad Física', { bold: true, size: 6.5, align: 'center' });
@@ -359,6 +391,7 @@ export async function generatePdf(nota: NotaData, username: string, notaPrefix =
   drawCell(doc, col4x, sigY + 2 * sr, col4w, 2 * sr, '', {}); // empty rows 2-3
   drawCell(doc, col4x, sigY + 4 * sr, col4w, sr, `C.I.: ${nota.sCi}`, { size: 6 });
   drawCell(doc, col4x, sigY + 5 * sr, col4w, 4 * sr, 'Firma:', { size: 6, vAlign: 'top' });
+  drawSignatureImage(doc, sigMap.get('seguridad'), col4x, sigY + 5 * sr, col4w, 4 * sr);
 
   y = sigY + 9 * sr;
 

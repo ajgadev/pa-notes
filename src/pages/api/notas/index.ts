@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ url }) => {
   });
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, url }) => {
   const user = locals.user;
   const body = await request.json();
 
@@ -111,7 +111,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     audit({ userId: user.userId, username: user.username, action: 'nota_created', target: `nota#${result.numero}` });
 
     // Generate signature tokens for assigned signers
-    const tokenResult = createSignatureTokens(Number(result.id), body);
+    const baseUrl = `${url.protocol}//${url.host}`;
+    const tokenResult = createSignatureTokens(Number(result.id), body, baseUrl);
 
     return new Response(JSON.stringify({
       success: true,

@@ -1,6 +1,7 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
 import ChangePasswordForm from '../components/ChangePasswordForm';
+import SavedSignatureEditor from '../components/SavedSignatureEditor';
 import { db } from '../lib/db';
 import { profiles, users } from '../lib/schema';
 import { eq } from 'drizzle-orm';
@@ -8,6 +9,7 @@ import { eq } from 'drizzle-orm';
 const user = Astro.locals.user;
 const profile = db.select().from(profiles).where(eq(profiles.userId, user.userId)).get();
 const userRow = db.select({ email: users.email }).from(users).where(eq(users.id, user.userId)).get();
+const savedSignature = profile?.savedSignature ?? null;
 ---
 
 <AppLayout title="Mi Perfil">
@@ -46,6 +48,12 @@ const userRow = db.select({ email: users.email }).from(users).where(eq(users.id,
           Guardar Datos
         </button>
       </form>
+    </div>
+
+    <div class="rounded-xl border bg-white p-5 shadow-sm">
+      <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-pa-orange">Mi Firma</h2>
+      <p class="mb-3 text-xs text-gray-500">Guarde su firma para reutilizarla al firmar notas con un solo clic.</p>
+      <SavedSignatureEditor client:load savedSignature={savedSignature} />
     </div>
 
     <div class="rounded-xl border bg-white p-5 shadow-sm">

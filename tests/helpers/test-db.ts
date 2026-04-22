@@ -32,6 +32,7 @@ export function createTestDb() {
       nombre TEXT NOT NULL DEFAULT '',
       apellido TEXT NOT NULL DEFAULT '',
       ci TEXT NOT NULL DEFAULT '',
+      saved_signature TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -86,6 +87,7 @@ export function createTestDb() {
       apro_nombre TEXT DEFAULT '',
       apro_ci TEXT DEFAULT '',
       creado_por INTEGER NOT NULL REFERENCES users(id),
+      signature_status TEXT NOT NULL DEFAULT 'borrador',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -104,6 +106,53 @@ export function createTestDb() {
     CREATE TABLE config (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    );
+
+    CREATE TABLE signatures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nota_id INTEGER NOT NULL REFERENCES notas(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      signed_by_name TEXT NOT NULL,
+      signed_by_ci TEXT NOT NULL DEFAULT '',
+      signature_data TEXT NOT NULL,
+      signed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ip TEXT,
+      token_id INTEGER,
+      UNIQUE(nota_id, role)
+    );
+
+    CREATE TABLE signature_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nota_id INTEGER NOT NULL REFERENCES notas(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      recipient_email TEXT NOT NULL DEFAULT '',
+      recipient_name TEXT NOT NULL DEFAULT '',
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      nota_id INTEGER,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE email_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      to_address TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body_html TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_attempt TEXT,
+      error TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 

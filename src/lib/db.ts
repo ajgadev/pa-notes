@@ -11,3 +11,6 @@ sqlite.pragma('foreign_keys = ON');
 
 export const db = drizzle(sqlite, { schema });
 export { sqlite };
+
+import { startEmailWorker } from './email-worker';
+startEmailWorker();

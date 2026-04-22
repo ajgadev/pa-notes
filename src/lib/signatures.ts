@@ -1,7 +1,10 @@
 import crypto from 'crypto';
 import { db, sqlite } from './db';
-import { signatures, signatureTokens, notas, personal, profiles } from './schema';
+import { signatures, signatureTokens, notas, personal, profiles, users } from './schema';
 import { eq, and } from 'drizzle-orm';
+import { notifyPendingSignatures, notifySignatureReceived, notifyAllSigned } from './notify';
+import { queueEmail } from './email';
+import { signatureRequestTemplate, allSignedTemplate } from './email-templates';
 
 const TOKEN_EXPIRY_DAYS = 7;
 
@@ -41,29 +44,37 @@ export function getSignerRoles(nota: {
   return signers;
 }
 
-export function createSignatureTokens(notaId: number, nota: Parameters<typeof getSignerRoles>[0]): { created: number; warnings: string[] } {
+export function createSignatureTokens(notaId: number, nota: Parameters<typeof getSignerRoles>[0], baseUrl?: string): { created: number; warnings: string[] } {
   const signers = getSignerRoles(nota);
   const warnings: string[] = [];
   let created = 0;
+  const emailedCis = new Set<string>();
 
-  // Delete any existing unused tokens for this nota
   sqlite.prepare('DELETE FROM signature_tokens WHERE nota_id = ? AND used_at IS NULL').run(notaId);
 
   const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const notaRow = db.select({ numero: notas.numero }).from(notas).where(eq(notas.id, notaId)).get();
 
   for (const signer of signers) {
-    // Check if already signed
     const existing = db.select().from(signatures)
       .where(and(eq(signatures.notaId, notaId), eq(signatures.role, signer.role)))
       .get();
     if (existing) continue;
 
-    // Look up email from personal table
     const person = db.select().from(personal)
       .where(eq(personal.ci, signer.ci))
       .get();
 
-    const email = person?.email?.trim() || '';
+    let email = person?.email?.trim() || '';
+    if (!email) {
+      const profile = db.select({ userId: profiles.userId }).from(profiles)
+        .where(eq(profiles.ci, signer.ci)).get();
+      if (profile) {
+        const user = db.select({ email: users.email }).from(users)
+          .where(eq(users.id, profile.userId)).get();
+        email = user?.email?.trim() || '';
+      }
+    }
     if (!email) {
       warnings.push(`No se encontró email para ${ROLE_LABELS[signer.role]} (${signer.name}, CI: ${signer.ci})`);
     }
@@ -79,15 +90,32 @@ export function createSignatureTokens(notaId: number, nota: Parameters<typeof ge
       expiresAt,
     }).run();
 
+    if (email && baseUrl && notaRow && !emailedCis.has(signer.ci)) {
+      const tmpl = signatureRequestTemplate({
+        numero: notaRow.numero,
+        role: ROLE_LABELS[signer.role],
+        signerName: signer.name,
+        url: `${baseUrl}/firmar/${token}`,
+      });
+      queueEmail(email, tmpl.subject, tmpl.html);
+      emailedCis.add(signer.ci);
+    }
+
     created++;
   }
 
-  // Update nota signatureStatus
   if (signers.length > 0) {
     const signedCount = db.select().from(signatures)
       .where(eq(signatures.notaId, notaId)).all().length;
     const status = signedCount >= signers.length ? 'completa' : 'pendiente';
     db.update(notas).set({ signatureStatus: status }).where(eq(notas.id, notaId)).run();
+
+    if (notaRow) {
+      const unsignedCis = signers
+        .filter((s) => !db.select().from(signatures).where(and(eq(signatures.notaId, notaId), eq(signatures.role, s.role))).get())
+        .map((s) => s.ci);
+      notifyPendingSignatures(notaId, notaRow.numero, unsignedCis);
+    }
   }
 
   return { created, warnings };
@@ -118,10 +146,25 @@ interface RecordSignatureParams {
   tokenId?: number;
 }
 
+function isValidSignatureData(data: string): boolean {
+  if (!data.startsWith('data:image/png;base64,')) return false;
+  const base64 = data.slice('data:image/png;base64,'.length);
+  if (base64.length === 0) return false;
+  if (!/^[A-Za-z0-9+/]+=*$/.test(base64)) return false;
+  const decoded = Buffer.from(base64, 'base64');
+  // PNG magic bytes: 137 80 78 71 13 10 26 10
+  return decoded.length >= 8
+    && decoded[0] === 0x89 && decoded[1] === 0x50 && decoded[2] === 0x4E && decoded[3] === 0x47
+    && decoded[4] === 0x0D && decoded[5] === 0x0A && decoded[6] === 0x1A && decoded[7] === 0x0A;
+}
+
 export function recordSignature(params: RecordSignatureParams): { success: boolean; allSigned: boolean; error?: string } {
-  // Validate signature data size (max 500KB)
   if (params.signatureData.length > 500 * 1024) {
     return { success: false, allSigned: false, error: 'La firma excede el tamaño máximo permitido (500KB)' };
+  }
+
+  if (!isValidSignatureData(params.signatureData)) {
+    return { success: false, allSigned: false, error: 'Formato de firma inválido. Debe ser una imagen PNG válida.' };
   }
 
   const nota = db.select().from(notas).where(eq(notas.id, params.notaId)).get();
@@ -170,6 +213,23 @@ export function recordSignature(params: RecordSignatureParams): { success: boole
   });
 
   const allSigned = recordAndCheck();
+
+  notifySignatureReceived(params.notaId, nota.numero, params.signedByName, ROLE_LABELS[params.role]);
+  if (allSigned) {
+    notifyAllSigned(params.notaId, nota.numero);
+
+    const creator = db.select({ email: users.email, username: users.username })
+      .from(users).where(eq(users.id, nota.creadoPor)).get();
+    const creatorProfile = db.select({ nombre: profiles.nombre, apellido: profiles.apellido })
+      .from(profiles).where(eq(profiles.userId, nota.creadoPor)).get();
+    const creatorName = [creatorProfile?.nombre, creatorProfile?.apellido].filter(Boolean).join(' ') || creator?.username || '';
+    const creatorEmail = creator?.email?.trim();
+
+    if (creatorEmail) {
+      const tmpl = allSignedTemplate({ numero: nota.numero, creatorName });
+      queueEmail(creatorEmail, tmpl.subject, tmpl.html);
+    }
+  }
 
   return { success: true, allSigned };
 }
