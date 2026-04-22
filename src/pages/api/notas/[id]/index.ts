@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { db, sqlite } from '../../../../lib/db';
-import { notas, notaItems } from '../../../../lib/schema';
+import { notas, notaItems, signatures } from '../../../../lib/schema';
 import { eq } from 'drizzle-orm';
+import { hasAnySignature, createSignatureTokens } from '../../../../lib/signatures';
 
 export const GET: APIRoute = async ({ params }) => {
   const id = parseInt(params.id!);
@@ -14,8 +15,13 @@ export const GET: APIRoute = async ({ params }) => {
   }
 
   const items = db.select().from(notaItems).where(eq(notaItems.notaId, id)).all();
+  const sigs = db.select({
+    role: signatures.role,
+    signedByName: signatures.signedByName,
+    signedAt: signatures.signedAt,
+  }).from(signatures).where(eq(signatures.notaId, id)).all();
 
-  return new Response(JSON.stringify({ ...nota, items }), {
+  return new Response(JSON.stringify({ ...nota, items, signatures: sigs }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };
@@ -28,6 +34,13 @@ export const PUT: APIRoute = async ({ params, request }) => {
   if (!existing) {
     return new Response(JSON.stringify({ error: 'Nota no encontrada' }), {
       status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (hasAnySignature(id)) {
+    return new Response(JSON.stringify({ error: 'No se puede editar una nota con firmas existentes. Anule la nota y cree una nueva.' }), {
+      status: 409,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -68,6 +81,10 @@ export const PUT: APIRoute = async ({ params, request }) => {
     });
 
     updateNota();
+
+    // Regenerate signature tokens for updated signer assignments
+    createSignatureTokens(id, body);
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' },
     });

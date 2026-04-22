@@ -106,7 +106,16 @@ npx drizzle-kit push --force || echo "[WARN] drizzle-kit push failed — applyin
 # Manual idempotent migrations for columns/tables drizzle-kit can't handle
 if [ -f "$DB_FILE" ]; then
   sqlite3 "$DB_FILE" "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "ALTER TABLE users ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
   sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT NOT NULL, action TEXT NOT NULL, target TEXT, detail TEXT, ip TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
+
+  # Signature workflow tables (Fase 17)
+  sqlite3 "$DB_FILE" "ALTER TABLE notas ADD COLUMN signature_status TEXT NOT NULL DEFAULT 'borrador';" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "ALTER TABLE profiles ADD COLUMN saved_signature TEXT;" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS signatures (id INTEGER PRIMARY KEY AUTOINCREMENT, nota_id INTEGER NOT NULL REFERENCES notas(id) ON DELETE CASCADE, role TEXT NOT NULL, signed_by_name TEXT NOT NULL, signed_by_ci TEXT NOT NULL, signature_data TEXT NOT NULL, signed_at TEXT NOT NULL DEFAULT (datetime('now')), ip TEXT, token_id INTEGER, UNIQUE(nota_id, role));" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS signature_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT, nota_id INTEGER NOT NULL REFERENCES notas(id) ON DELETE CASCADE, role TEXT NOT NULL, token TEXT UNIQUE NOT NULL, recipient_email TEXT NOT NULL DEFAULT '', recipient_name TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, type TEXT NOT NULL, message TEXT NOT NULL, nota_id INTEGER, read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
+  sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS email_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, to_address TEXT NOT NULL, subject TEXT NOT NULL, body_html TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, last_attempt TEXT, error TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
 fi
 
 # Only seed on first deploy (no users table or zero users)
@@ -211,4 +220,7 @@ echo "    systemctl status pa-notas     # status"
 echo "    systemctl restart pa-notas    # restart"
 echo "    journalctl -u pa-notas -f     # system logs"
 echo "    tail -f /opt/pa-notas/data/logs/app.log  # app logs"
+echo ""
+echo "  Admin oculto:"
+echo "    cd /opt/pa-notas && npx tsx scripts/create-hidden-admin.ts"
 echo "============================================"

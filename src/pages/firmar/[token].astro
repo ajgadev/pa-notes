@@ -1,0 +1,14 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SigningPage from '../../components/SigningPage';
+import { db } from '../../lib/db';
+import { config } from '../../lib/schema';
+import { eq } from 'drizzle-orm';
+
+const token = Astro.params.token!;
+const notaPrefix = db.select().from(config).where(eq(config.key, 'nota_prefix')).get()?.value ?? 'NS';
+---
+
+<Layout title="Firmar Nota">
+  <SigningPage client:load token={token} notaPrefix={notaPrefix} />
+</Layout>

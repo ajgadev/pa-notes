@@ -4,6 +4,7 @@ import { notas } from '../../../../lib/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from '../../../../lib/logger';
 import { audit } from '../../../../lib/audit';
+import { expireTokensForNota } from '../../../../lib/signatures';
 
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   if (locals.user.role !== 'admin') {
@@ -33,6 +34,10 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 
   db.update(notas).set({ estado }).where(eq(notas.id, id)).run();
+
+  if (estado === 'Nula') {
+    expireTokensForNota(id);
+  }
 
   const action = estado === 'Nula' ? 'nota_anulada' : 'nota_restaurada';
   logger.info(`Nota ${estado === 'Nula' ? 'anulada' : 'restaurada'}`, { notaId: id, numero: existing.numero, user: locals.user.username });

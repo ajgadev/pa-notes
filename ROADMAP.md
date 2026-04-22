@@ -206,6 +206,13 @@ Se revirtió la separación: los "solicitantes" se unifican en la tabla `persona
 
 ---
 
+- [x] Añadir columna `hidden` (boolean, default `false`) a la tabla `users`
+- [x] `/api/usuarios` GET filtra `hidden=true` de la respuesta
+- [x] `/api/usuarios` POST (update/toggle/reset) rechaza operaciones sobre usuarios con `hidden=true`
+- [x] Login y auth sin cambios — el usuario oculto entra como cualquier admin
+- [x] Script CLI `scripts/create-hidden-admin.ts` — prompt interactivo de username + password (credenciales NO en git/seed)
+- [x] Migración idempotente en `deploy-server.sh` (`ALTER TABLE users ADD COLUMN hidden ...`)
+- [x] El admin oculto gestiona su propia cuenta vía `/perfil` (no aparece en listados, ni siquiera para sí mismo)
 ## Fase 14 — Permisos granulares
 
 Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistema de permisos por página/acción:
@@ -231,26 +238,89 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 
 ---
 
-## Fase 16 — Notificaciones por email
+## Fase 16 — Firma digital
 
-- [ ] Configuración SMTP en admin (servidor, puerto, usuario, contraseña, remitente)
-- [ ] Email al crear nota: notificar a los firmantes involucrados
-- [ ] Email al anular nota: notificar al creador y firmantes
-- [ ] Email de recuperación de contraseña (reemplazar sistema offline de tokens)
-- [ ] Plantillas de email configurables
-- [ ] Cola de envío con reintentos (tabla `email_queue`)
+### Sub-fase 16.1 — Schema y fundación
 
----
+- [x] Tabla `signatures` (notaId, role, signedByName, signedByCi, signatureData base64 PNG, signedAt, ip, tokenId) con constraint UNIQUE(nota_id, role)
+- [x] Tabla `signature_tokens` (notaId, role, token 64 hex, recipientEmail, recipientName, expiresAt 7 días, usedAt)
+- [x] Tabla `notifications` (userId, type, message, notaId, read) — preparada para sub-fase 16.4
+- [x] Tabla `email_queue` (toAddress, subject, bodyHtml, status, attempts, error) — preparada para sub-fase 16.3
+- [x] Columna `signature_status` en `notas` (borrador → pendiente → completa)
+- [x] Columna `saved_signature` en `profiles` (base64 PNG para firma reutilizable)
+- [x] Lógica central en `src/lib/signatures.ts`: createSignatureTokens, validateToken, recordSignature, getSignerRoles, hasAnySignature, expireTokensForNota
+- [x] Migraciones idempotentes en `scripts/deploy-server.sh`
 
-## Fase 17 — Firma digital
+### Sub-fase 16.2 — Firma pública y autenticada
 
-- [ ] Canvas de firma táctil (dibujar firma con dedo/mouse)
-- [ ] Guardar firmas como imágenes (PNG) asociadas a cada rol en la nota
-- [ ] Flujo de aprobación: nota pasa por estados (Borrador → Pendiente Firmas → Firmada → Completada)
-- [ ] Cada firmante recibe email/notificación para firmar
-- [ ] Firma incluida en el PDF exportado
-- [ ] Registro de timestamp + IP de cada firma
-- [ ] Opción de firma con PIN (código personal de 4-6 dígitos)
+- [x] Componente `SignaturePad.tsx` — canvas táctil (librería `signature_pad`), subir imagen PNG/JPG, opción de firma guardada, máx 500KB
+- [x] Componente `NotaReadOnly.tsx` — vista de solo lectura de la nota con estado de firmas por rol
+- [x] Componente `SigningPage.tsx` — página pública completa: carga nota vía token, muestra NotaReadOnly + SignaturePad
+- [x] Página `/firmar/[token]` — ruta pública (sin auth) para firmantes externos
+- [x] API `GET/POST /api/firmar/[token]` — valida token, retorna nota, registra firma con IP
+- [x] Rutas `/firmar` y `/api/firmar` agregadas a PUBLIC_PATHS en middleware
+- [x] Componente `SignatureStatus.tsx` — panel de estado de firmas en página de edición, firma inline para usuarios autenticados, botón "Copiar enlace" para tokens
+- [x] API `GET /api/notas/[id]/firmas` — estado de firmas y tokens por nota
+- [x] API `POST /api/notas/[id]/firmas/firmar` — firma autenticada (valida CI del usuario = CI del firmante asignado)
+
+### Sub-fase 16.3 — Generación de tokens y protección de edición
+
+- [x] `POST /api/notas` genera tokens automáticamente al crear nota con firmantes asignados
+- [x] `PUT /api/notas/[id]` bloquea edición si hay firmas (409 Conflict) — debe anular y crear nueva
+- [x] `PUT /api/notas/[id]` regenera tokens si no hay firmas y se cambian firmantes
+- [x] `PUT /api/notas/[id]/estado` expira tokens al anular nota
+- [x] `GET /api/notas/[id]` incluye firmas en la respuesta
+- [x] Página de edición muestra aviso "nota con firmas, no editable" + panel SignatureStatus
+- [ ] Mostrar `signatureStatus` (borrador/pendiente/completa) como badge en la lista de notas (`NotasList.tsx`)
+- [ ] Advertencias visibles al usuario cuando un firmante no tiene email en tabla `personal`
+
+### Sub-fase 16.4 — Notificaciones in-app
+
+- [ ] API `GET /api/notificaciones` — notificaciones del usuario (paginadas, `?unread=1` para conteo)
+- [ ] API `PUT /api/notificaciones` — marcar como leídas (`{ids: []}` o `{all: true}`)
+- [ ] Componente `NotificationBell.tsx` — icono campana + badge conteo, dropdown, poll cada 60s
+- [ ] Agregar NotificationBell en topbar de `AppLayout.astro`
+- [ ] Crear notificación `firma_pendiente` cuando nota se crea con firmantes que tienen cuenta
+- [ ] Crear notificación `firma_recibida` al creador cuando alguien firma
+- [ ] Crear notificación `todas_firmadas` al creador cuando se completan todas las firmas
+- [ ] Vincular personal → usuario por CI (`personal.ci` = `profiles.ci`) para determinar quién recibe notificación
+
+### Sub-fase 16.5 — Email (SMTP)
+
+- [ ] Instalar `nodemailer` + `@types/nodemailer`
+- [ ] Servicio `src/lib/email.ts`: queueEmail, processEmailQueue, getSmtpConfig, testSmtpConnection
+- [ ] Plantillas `src/lib/email-templates.ts`: signatureRequestTemplate, allSignedTemplate (branding PA)
+- [ ] Worker `src/lib/email-worker.ts`: setInterval cada 30s para procesar cola
+- [ ] API `GET/PUT/POST /api/config/smtp` — admin: guardar config SMTP, probar conexión
+- [ ] Sección SMTP en `AdminConfig.tsx` (host, puerto, usuario, contraseña, remitente, toggle, botón test)
+- [ ] Config keys en DB: smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, smtp_enabled
+- [ ] Enviar email de solicitud de firma al crear nota (si firmante tiene email)
+- [ ] Enviar email al creador cuando todas las firmas están completas
+
+### Sub-fase 16.6 — Vista pendientes + PDF + perfil
+
+- [ ] Tab "Pendientes mi firma" en `NotasList.tsx` (filtra notas donde CI del usuario = firmante sin firma)
+- [ ] API `GET /api/notas/pendientes` — notas pendientes de firma del usuario autenticado
+- [ ] Badge de pendientes en sidebar junto a "Notas"
+- [ ] Embeber imágenes de firma en PDF exportado (`PdfExporter.tsx` — `doc.addImage()`)
+- [ ] Texto "Firmado: {fecha}" bajo cada firma en el PDF
+- [ ] Sección "Mi Firma" en página de perfil (`/perfil`) con SignaturePad para guardar firma reutilizable
+- [ ] Opción "Usar firma guardada" al firmar una nota (pre-llena canvas, requiere submit explícito)
+
+### Sub-fase 16.7 — Hardening
+
+- [ ] Rate limiting en `/api/firmar/[token]` (prevenir fuerza bruta)
+- [ ] Validar que signatureData sea PNG válido antes de guardar
+- [ ] Audit logging completo para todos los eventos de firma
+- [ ] Tests de integración para flujo de firma (token, autenticado, bloqueo de edición)
+
+### Decisiones de diseño (referencia)
+
+- **Edición post-firma**: bloqueada (409). Debe anular nota y crear nueva
+- **Elaborado por**: NO se auto-firma al crear; requiere firma explícita como los demás roles
+- **Firma guardada**: usuarios pueden guardar firma en perfil y reutilizarla con un clic
+- **Seguridad tokens**: 64 hex chars (256 bits entropía), expiran en 7 días, uso único
+- **Tamaño máximo firma**: 500KB base64
 
 ---
 

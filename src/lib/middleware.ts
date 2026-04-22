@@ -29,6 +29,8 @@ export function requireAdmin(context: APIContext): JwtPayload {
 export function isPublicPath(path: string): boolean {
   if (PUBLIC_PATHS.includes(path)) return true;
   if (path.startsWith('/login/recuperar')) return true;
+  if (path.startsWith('/firmar')) return true;
+  if (path.startsWith('/api/firmar')) return true;
   return false;
 }
 

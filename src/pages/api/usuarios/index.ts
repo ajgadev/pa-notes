@@ -17,6 +17,7 @@ export const GET: APIRoute = async () => {
     ci: profiles.ci,
   }).from(users)
     .leftJoin(profiles, eq(users.id, profiles.userId))
+    .where(eq(users.hidden, false))
     .all();
 
   // Attach reset tokens if active
@@ -88,6 +89,12 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (action === 'update') {
     const { id, role, active, email } = body;
+    const target = db.select().from(users).where(eq(users.id, id)).get();
+    if (target?.hidden) {
+      return new Response(JSON.stringify({ error: 'No autorizado' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const updates: Record<string, unknown> = {};
     if (role !== undefined) updates.role = role;
     if (active !== undefined) updates.active = active;
@@ -101,6 +108,12 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (action === 'reset-password') {
     const { id, newPassword } = body;
+    const target = db.select().from(users).where(eq(users.id, id)).get();
+    if (target?.hidden) {
+      return new Response(JSON.stringify({ error: 'No autorizado' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' },
+      });
+    }
     if (!newPassword || newPassword.length < 8) {
       return new Response(JSON.stringify({ error: 'La contraseña debe tener al menos 8 caracteres' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },

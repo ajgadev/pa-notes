@@ -4,6 +4,7 @@ import { notas, notaItems, config } from '../../../lib/schema';
 import { desc } from 'drizzle-orm';
 import { logger } from '../../../lib/logger';
 import { audit } from '../../../lib/audit';
+import { createSignatureTokens } from '../../../lib/signatures';
 
 export const GET: APIRoute = async ({ url }) => {
   const page = parseInt(url.searchParams.get('page') || '1');
@@ -108,7 +109,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const result = createNota();
     logger.info('Nota created', { id: result.id, numero: result.numero, user: user.username });
     audit({ userId: user.userId, username: user.username, action: 'nota_created', target: `nota#${result.numero}` });
-    return new Response(JSON.stringify({ success: true, ...result }), {
+
+    // Generate signature tokens for assigned signers
+    const tokenResult = createSignatureTokens(Number(result.id), body);
+
+    return new Response(JSON.stringify({
+      success: true,
+      ...result,
+      signatureWarnings: tokenResult.warnings,
+    }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });

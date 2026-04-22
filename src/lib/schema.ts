@@ -9,6 +9,7 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().default(''),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   mustChangePassword: integer('must_change_password', { mode: 'boolean' }).notNull().default(false),
+  hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
 
@@ -18,6 +19,7 @@ export const profiles = sqliteTable('profiles', {
   nombre: text('nombre').notNull().default(''),
   apellido: text('apellido').notNull().default(''),
   ci: text('ci').notNull().default(''),
+  savedSignature: text('saved_signature'),
   updatedAt: text('updated_at').notNull().default(sql`(datetime('now'))`),
 });
 
@@ -49,6 +51,7 @@ export const notas = sqliteTable('notas', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   numero: integer('numero').unique().notNull(),
   estado: text('estado', { enum: ['Vigente', 'Nula'] }).notNull().default('Vigente'),
+  signatureStatus: text('signature_status', { enum: ['borrador', 'pendiente', 'completa'] }).notNull().default('borrador'),
   departamento: text('departamento').default(''),
   fecha: text('fecha'),
   empresa: text('empresa').notNull().default('Petro Alianza'),
@@ -100,5 +103,51 @@ export const auditLog = sqliteTable('audit_log', {
   target: text('target'),
   detail: text('detail'),
   ip: text('ip'),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+});
+
+export const signatures = sqliteTable('signatures', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  notaId: integer('nota_id').notNull().references(() => notas.id, { onDelete: 'cascade' }),
+  role: text('role', { enum: ['conductor', 'gerente', 'seguridad', 'elaborado', 'aprobado'] }).notNull(),
+  signedByName: text('signed_by_name').notNull(),
+  signedByCi: text('signed_by_ci').notNull(),
+  signatureData: text('signature_data').notNull(),
+  signedAt: text('signed_at').notNull().default(sql`(datetime('now'))`),
+  ip: text('ip'),
+  tokenId: integer('token_id'),
+});
+
+export const signatureTokens = sqliteTable('signature_tokens', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  notaId: integer('nota_id').notNull().references(() => notas.id, { onDelete: 'cascade' }),
+  role: text('role', { enum: ['conductor', 'gerente', 'seguridad', 'elaborado', 'aprobado'] }).notNull(),
+  token: text('token').unique().notNull(),
+  recipientEmail: text('recipient_email').notNull().default(''),
+  recipientName: text('recipient_name').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+});
+
+export const notifications = sqliteTable('notifications', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type', { enum: ['firma_pendiente', 'firma_recibida', 'todas_firmadas'] }).notNull(),
+  message: text('message').notNull(),
+  notaId: integer('nota_id'),
+  read: integer('read', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
+});
+
+export const emailQueue = sqliteTable('email_queue', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  toAddress: text('to_address').notNull(),
+  subject: text('subject').notNull(),
+  bodyHtml: text('body_html').notNull(),
+  status: text('status', { enum: ['pending', 'sent', 'failed'] }).notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  lastAttempt: text('last_attempt'),
+  error: text('error'),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
