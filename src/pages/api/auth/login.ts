@@ -6,9 +6,10 @@ import { verifyPassword, createToken } from '../../../lib/auth';
 import { logger } from '../../../lib/logger';
 import { checkRateLimit } from '../../../lib/rate-limit';
 import { audit } from '../../../lib/audit';
+import { getClientIp } from '../../../lib/middleware';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const ip = getClientIp(request);
   const { allowed, retryAfterSec } = checkRateLimit(ip);
 
   if (!allowed) {

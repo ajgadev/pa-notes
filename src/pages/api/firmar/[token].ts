@@ -6,12 +6,7 @@ import { validateToken, recordSignature, getRoleLabel } from '../../../lib/signa
 import { audit } from '../../../lib/audit';
 import { logger } from '../../../lib/logger';
 import { checkRateLimit } from '../../../lib/rate-limit';
-
-function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || 'unknown';
-}
+import { getClientIp } from '../../../lib/middleware';
 
 export const GET: APIRoute = async ({ params, request }) => {
   const ip = getClientIp(request);
@@ -82,7 +77,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     notaId: nota.id,
     role: token.role as any,
     signedByName: token.recipientName,
-    signedByCi: '', // CI is already on the nota
+    signedByCi: token.recipientCi || '',
     signatureData,
     ip: signIp,
     tokenId: token.id,

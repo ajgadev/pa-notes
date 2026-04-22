@@ -229,12 +229,11 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 ## Fase 15 — Seguridad avanzada
 
 - [x] Rate limiting en login (máx. 10 intentos por IP en 15 min)
-- [ ] CSRF tokens en formularios
 - [x] Headers de seguridad (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy) via middleware
 - [x] Registro de auditoría: tabla `audit_log` con usuario, acción, entidad, timestamp, IP
-- [ ] Expiración de sesiones inactivas (configurable)
 - [x] Forzar cambio de contraseña en primer login
 - [x] Política de contraseñas (mínimo 8 caracteres en todos los endpoints)
+- _(CSRF y expiración de sesiones movidos a sub-fase 16.8)_
 
 ---
 
@@ -301,6 +300,7 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 - [x] Config keys en DB: smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, smtp_enabled
 - [x] Enviar email de solicitud de firma al crear nota (si firmante tiene email)
 - [x] Enviar email al creador cuando todas las firmas están completas
+- [x] Mejorar plantillas de email: logo `pa-logo-white.png` embebido (base64 inline) en header
 
 ### Sub-fase 16.6 — Vista pendientes + PDF + perfil
 
@@ -323,6 +323,16 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 - [x] Audit logging completo para todos los eventos de firma
 - [x] Tests de integración para flujo de firma (token, autenticado, bloqueo de edición)
 
+### Sub-fase 16.8 — Seguridad de firmas y email
+
+- [x] Escapar HTML en datos de usuario en plantillas de email (signerName, creatorName, numero) para prevenir inyección
+- [x] Validar imagen con `isValidSignatureData()` en endpoint de firma guardada (`/api/perfil/firma`)
+- [x] Guardar CI del firmante en firma por token (agregar `recipientCi` a `signature_tokens`, popular `signedByCi` al firmar)
+- [x] Encriptar contraseña SMTP en base de datos (cifrar AES-256-GCM con clave derivada del JWT_SECRET)
+- [x] CSRF protection — validar header `Origin` en requests mutantes (POST/PUT/DELETE) contra el host
+- [x] Proteger rate limiting contra spoofing de `X-Forwarded-For` — `getClientIp()` centralizado, prefiere `X-Real-IP`, usa último valor de `X-Forwarded-For`
+- [x] Expiración de sesiones inactivas — configurable via `session_timeout_min` en config, sliding window con refresh automático
+
 ### Decisiones de diseño (referencia)
 
 - **Edición post-firma**: bloqueada (409). Debe anular nota y crear nueva
@@ -330,6 +340,19 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 - **Firma guardada**: usuarios pueden guardar firma en perfil y reutilizarla con un clic
 - **Seguridad tokens**: 64 hex chars (256 bits entropía), expiran en 7 días, uso único
 - **Tamaño máximo firma**: 500KB base64
+
+---
+
+## Fase 17 — UX: Toasts y diálogos de confirmación
+
+- [x] Componente `Toast.tsx` — notificaciones flotantes (éxito/error/info), auto-dismiss 3s, posición esquina superior derecha, patrón singleton para islas Astro
+- [x] Función `toast(message, type)` exportada — invocable desde cualquier componente sin contexto React
+- [x] Reemplazar `alert()` y mensajes inline por toasts en: AdminUsuarios, AdminCrud, SignatureStatus, SignaturePad, SigningPage, PdfPreviewButton, SavedSignatureEditor, NotasList
+- [x] Componente `ConfirmDialog.tsx` — modal de confirmación estilizado (mensaje, botones Cancelar/Confirmar con color rojo para acciones destructivas)
+- [x] Función `confirm(options)` exportada — retorna Promise<boolean>, patrón singleton para islas Astro
+- [x] Reemplazar `confirm()` nativo por ConfirmDialog en: anular/restaurar nota (NotasList), eliminar firma guardada (SavedSignatureEditor)
+- [x] ToastContainer y ConfirmDialogContainer añadidos a AppLayout.astro y página de firma pública
+- [x] Animaciones CSS (slide-in, scale-in) en global.css
 
 ---
 

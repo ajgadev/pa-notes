@@ -1,9 +1,9 @@
 import { defineMiddleware } from 'astro:middleware';
-import { verifyToken } from './lib/auth';
+import { verifyToken, createToken } from './lib/auth';
 import { isPublicPath, isAdminPath } from './lib/middleware';
 import { logger } from './lib/logger';
 import { db } from './lib/db';
-import { users } from './lib/schema';
+import { users, config } from './lib/schema';
 import { eq } from 'drizzle-orm';
 
 function addSecurityHeaders(res: Response): Response {
@@ -67,6 +67,46 @@ export const onRequest = defineMiddleware(async (context, next) => {
       });
     }
     return context.redirect('/dashboard');
+  }
+
+  // Sliding session: refresh token on each request to extend expiry
+  const tokenPayload = user as any;
+  if (tokenPayload.iat) {
+    const timeoutRow = db.select().from(config).where(eq(config.key, 'session_timeout_min')).get();
+    const timeoutMin = parseInt(timeoutRow?.value || '480'); // default 8h
+    const ageMin = (Date.now() / 1000 - tokenPayload.iat) / 60;
+
+    if (ageMin > timeoutMin) {
+      context.cookies.delete('token', { path: '/' });
+      if (path.startsWith('/api/')) {
+        return new Response(JSON.stringify({ error: 'Sesión expirada' }), {
+          status: 401, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return context.redirect('/login');
+    }
+
+    // Refresh token if older than half the timeout
+    if (ageMin > timeoutMin / 2) {
+      const freshToken = createToken({ userId: user.userId, username: user.username, role: user.role });
+      context.cookies.set('token', freshToken, {
+        httpOnly: true, secure: import.meta.env.PROD, sameSite: 'lax', path: '/', maxAge: timeoutMin * 60,
+      });
+    }
+  }
+
+  // CSRF protection for state-changing requests
+  const MUTATION_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
+  if (MUTATION_METHODS.includes(method) && path.startsWith('/api/')) {
+    const origin = context.request.headers.get('origin');
+    const host = context.url.host;
+    if (origin && new URL(origin).host !== host) {
+      logger.warn(`CSRF blocked ${method} ${path}`, { origin, host, user: user.username });
+      return new Response(JSON.stringify({ error: 'Solicitud rechazada (CSRF)' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   // Attach user to locals

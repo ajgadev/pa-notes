@@ -8,7 +8,10 @@ import type Database from 'better-sqlite3';
 // Minimal valid 1x1 transparent PNG
 const VALID_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwADBwIAMCbHYQAAAABJRU5ErkJggg==';
 const VALID_SIGNATURE = `data:image/png;base64,${VALID_PNG_BASE64}`;
-const INVALID_SIGNATURE = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+// Minimal valid JPEG (FFD8FFE0 header)
+const VALID_JPEG_BASE64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAFBABAAAAAAAAAAAAAAAAAAAACf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKkA/9k=';
+const VALID_JPEG_SIGNATURE = `data:image/jpeg;base64,${VALID_JPEG_BASE64}`;
+const INVALID_SIGNATURE = 'data:text/plain;base64,SGVsbG8=';
 
 function createNotaWithSigners(sqlite: Database.Database, overrides: Record<string, string> = {}) {
   const defaults = {
@@ -249,25 +252,29 @@ describe('Edit blocking with signatures', () => {
   });
 });
 
-describe('PNG validation', () => {
-  it('valid PNG signature data is accepted', () => {
-    const data = VALID_SIGNATURE;
-    expect(data.startsWith('data:image/png;base64,')).toBe(true);
-
-    const base64 = data.slice('data:image/png;base64,'.length);
+describe('Image validation', () => {
+  it('valid PNG signature data has correct magic bytes', () => {
+    const base64 = VALID_PNG_BASE64;
     const decoded = Buffer.from(base64, 'base64');
-    // PNG magic bytes
     expect(decoded[0]).toBe(0x89);
-    expect(decoded[1]).toBe(0x50); // P
-    expect(decoded[2]).toBe(0x4E); // N
-    expect(decoded[3]).toBe(0x47); // G
+    expect(decoded[1]).toBe(0x50);
+    expect(decoded[2]).toBe(0x4E);
+    expect(decoded[3]).toBe(0x47);
   });
 
-  it('JPEG signature data has wrong prefix', () => {
+  it('valid JPEG signature data has correct magic bytes', () => {
+    const decoded = Buffer.from(VALID_JPEG_BASE64, 'base64');
+    expect(decoded[0]).toBe(0xFF);
+    expect(decoded[1]).toBe(0xD8);
+    expect(decoded[2]).toBe(0xFF);
+  });
+
+  it('invalid data type is rejected', () => {
     expect(INVALID_SIGNATURE.startsWith('data:image/png;base64,')).toBe(false);
+    expect(INVALID_SIGNATURE.startsWith('data:image/jpeg;base64,')).toBe(false);
   });
 
-  it('plain text is not valid PNG', () => {
+  it('plain text with PNG prefix has wrong magic bytes', () => {
     const data = 'data:image/png;base64,SGVsbG8gV29ybGQ=';
     const base64 = data.slice('data:image/png;base64,'.length);
     const decoded = Buffer.from(base64, 'base64');

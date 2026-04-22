@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { recordSignature, getSignerRoles, getRoleLabel, type SignatureRole } from '../../../../../lib/signatures';
 import { audit } from '../../../../../lib/audit';
 import { logger } from '../../../../../lib/logger';
+import { getClientIp } from '../../../../../lib/middleware';
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   const user = locals.user;
@@ -48,9 +49,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || '';
+  const ip = getClientIp(request);
 
   const userName = [profile?.nombre, profile?.apellido].filter(Boolean).join(' ') || user.username;
 

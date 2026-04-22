@@ -1,10 +1,38 @@
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 import { db } from './db';
 import { config, emailQueue } from './schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { logger } from './logger';
 
 const MAX_ATTEMPTS = 3;
+const ENC_PREFIX = 'enc:';
+
+function getEncryptionKey(): Buffer {
+  const secret = process.env.JWT_SECRET || 'default-key-change-me';
+  return crypto.createHash('sha256').update(secret).digest();
+}
+
+export function encryptValue(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return ENC_PREFIX + Buffer.concat([iv, tag, encrypted]).toString('base64');
+}
+
+export function decryptValue(stored: string): string {
+  if (!stored.startsWith(ENC_PREFIX)) return stored;
+  const key = getEncryptionKey();
+  const data = Buffer.from(stored.slice(ENC_PREFIX.length), 'base64');
+  const iv = data.subarray(0, 12);
+  const tag = data.subarray(12, 28);
+  const encrypted = data.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  return decipher.update(encrypted) + decipher.final('utf8');
+}
 
 interface SmtpConfig {
   host: string;
@@ -20,12 +48,21 @@ function getConfigValue(key: string): string {
   return row?.value ?? '';
 }
 
+function decryptSmtpPass(stored: string): string {
+  if (!stored) return '';
+  try {
+    return decryptValue(stored);
+  } catch {
+    return stored;
+  }
+}
+
 export function getSmtpConfig(): SmtpConfig {
   return {
     host: getConfigValue('smtp_host') || process.env.SMTP_HOST || 'smtp.resend.com',
     port: parseInt(getConfigValue('smtp_port') || process.env.SMTP_PORT || '465'),
     user: getConfigValue('smtp_user') || process.env.SMTP_USER || 'resend',
-    pass: getConfigValue('smtp_pass') || process.env.SMTP_PASS || '',
+    pass: decryptSmtpPass(getConfigValue('smtp_pass')) || process.env.SMTP_PASS || '',
     from: getConfigValue('smtp_from') || process.env.SMTP_FROM || 'PetroAlianza <onboarding@resend.dev>',
     enabled: (getConfigValue('smtp_enabled') || process.env.SMTP_ENABLED || '') === '1',
   };

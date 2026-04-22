@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import PasswordInput from './PasswordInput';
+import { toast } from './Toast';
 
 interface User {
   id: number;
@@ -117,7 +118,7 @@ export default function AdminUsuarios() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reset-password', id, newPassword }),
     });
-    alert('Contraseña actualizada');
+    toast('Contraseña actualizada');
   };
 
   return (

@@ -87,6 +87,7 @@ export function createSignatureTokens(notaId: number, nota: Parameters<typeof ge
       token,
       recipientEmail: email,
       recipientName: signer.name,
+      recipientCi: signer.ci,
       expiresAt,
     }).run();
 
@@ -146,16 +147,32 @@ interface RecordSignatureParams {
   tokenId?: number;
 }
 
-function isValidSignatureData(data: string): boolean {
-  if (!data.startsWith('data:image/png;base64,')) return false;
-  const base64 = data.slice('data:image/png;base64,'.length);
+export function isValidSignatureData(data: string): boolean {
+  const pngPrefix = 'data:image/png;base64,';
+  const jpegPrefix = 'data:image/jpeg;base64,';
+  const jpgPrefix = 'data:image/jpg;base64,';
+
+  let base64: string;
+  if (data.startsWith(pngPrefix)) {
+    base64 = data.slice(pngPrefix.length);
+  } else if (data.startsWith(jpegPrefix)) {
+    base64 = data.slice(jpegPrefix.length);
+  } else if (data.startsWith(jpgPrefix)) {
+    base64 = data.slice(jpgPrefix.length);
+  } else {
+    return false;
+  }
+
   if (base64.length === 0) return false;
   if (!/^[A-Za-z0-9+/]+=*$/.test(base64)) return false;
+
   const decoded = Buffer.from(base64, 'base64');
-  // PNG magic bytes: 137 80 78 71 13 10 26 10
-  return decoded.length >= 8
-    && decoded[0] === 0x89 && decoded[1] === 0x50 && decoded[2] === 0x4E && decoded[3] === 0x47
-    && decoded[4] === 0x0D && decoded[5] === 0x0A && decoded[6] === 0x1A && decoded[7] === 0x0A;
+  if (decoded.length < 4) return false;
+
+  const isPng = decoded[0] === 0x89 && decoded[1] === 0x50 && decoded[2] === 0x4E && decoded[3] === 0x47;
+  const isJpeg = decoded[0] === 0xFF && decoded[1] === 0xD8 && decoded[2] === 0xFF;
+
+  return isPng || isJpeg;
 }
 
 export function recordSignature(params: RecordSignatureParams): { success: boolean; allSigned: boolean; error?: string } {
@@ -164,7 +181,7 @@ export function recordSignature(params: RecordSignatureParams): { success: boole
   }
 
   if (!isValidSignatureData(params.signatureData)) {
-    return { success: false, allSigned: false, error: 'Formato de firma inválido. Debe ser una imagen PNG válida.' };
+    return { success: false, allSigned: false, error: 'Formato de firma inválido. Debe ser una imagen PNG o JPEG.' };
   }
 
   const nota = db.select().from(notas).where(eq(notas.id, params.notaId)).get();

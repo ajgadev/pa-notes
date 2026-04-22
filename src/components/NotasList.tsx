@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { generatePdf } from './PdfExporter';
 import { formatDate, formatNotaNumero } from '../lib/format';
+import { toast as showToast } from './Toast';
+import { confirm } from './ConfirmDialog';
 
 interface Nota {
   id: number;
@@ -60,7 +62,6 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
   const [sortKey, setSortKey] = useState<SortKey>('numero');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pageSize, setPageSize] = useState(20);
-  const [toast, setToast] = useState('');
   const [sigWarnings, setSigWarnings] = useState<string[]>([]);
   const [tab, setTab] = useState<'todas' | 'pendientes'>('todas');
   const [pendingCount, setPendingCount] = useState(0);
@@ -68,14 +69,13 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('guardado') === '1') {
-      setToast('Nota guardada exitosamente');
+      showToast('Nota guardada exitosamente');
       const warnings = params.get('sigWarnings');
       if (warnings) {
         setSigWarnings(warnings.split('||'));
+        setTimeout(() => setSigWarnings([]), 10000);
       }
       window.history.replaceState({}, '', window.location.pathname);
-      setTimeout(() => setToast(''), 4000);
-      setTimeout(() => setSigWarnings([]), 10000);
     }
   }, []);
 
@@ -129,7 +129,12 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
 
   const toggleEstado = async (id: number, current: string) => {
     const nuevoEstado = current === 'Vigente' ? 'Nula' : 'Vigente';
-    if (!confirm(`¿Cambiar estado a "${nuevoEstado}"?`)) return;
+    const ok = await confirm({
+      message: `¿Cambiar estado a "${nuevoEstado}"?`,
+      confirmText: nuevoEstado === 'Nula' ? 'Anular' : 'Restaurar',
+      danger: nuevoEstado === 'Nula',
+    });
+    if (!ok) return;
     await fetch(`/api/notas/${id}/estado`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -149,11 +154,6 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
 
   return (
     <div>
-      {toast && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-          {toast}
-        </div>
-      )}
       {sigWarnings.length > 0 && (
         <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
           <p className="font-medium mb-1">No se pudo enviar enlace de firma a:</p>

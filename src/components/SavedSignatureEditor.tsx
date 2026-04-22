@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import SignaturePad from './SignaturePad';
+import { toast } from './Toast';
+import { confirm } from './ConfirmDialog';
 
 interface Props {
   savedSignature: string | null;
@@ -9,11 +11,9 @@ export default function SavedSignatureEditor({ savedSignature: initial }: Props)
   const [saved, setSaved] = useState<string | null>(initial);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
 
   async function handleSave(dataUrl: string) {
     setSaving(true);
-    setMessage('');
     try {
       const res = await fetch('/api/perfil/firma', {
         method: 'PUT',
@@ -26,17 +26,17 @@ export default function SavedSignatureEditor({ savedSignature: initial }: Props)
       }
       setSaved(dataUrl);
       setEditing(false);
-      setMessage('Firma guardada');
-      setTimeout(() => setMessage(''), 3000);
+      toast('Firma guardada');
     } catch (err: any) {
-      setMessage(err.message || 'Error al guardar');
+      toast(err.message || 'Error al guardar', 'error');
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete() {
-    if (!confirm('¿Eliminar su firma guardada?')) return;
+    const ok = await confirm({ message: '¿Eliminar su firma guardada?', confirmText: 'Eliminar', danger: true });
+    if (!ok) return;
     setSaving(true);
     try {
       const res = await fetch('/api/perfil/firma', {
@@ -44,10 +44,9 @@ export default function SavedSignatureEditor({ savedSignature: initial }: Props)
       });
       if (!res.ok) throw new Error('Error');
       setSaved(null);
-      setMessage('Firma eliminada');
-      setTimeout(() => setMessage(''), 3000);
+      toast('Firma eliminada');
     } catch {
-      setMessage('Error al eliminar');
+      toast('Error al eliminar', 'error');
     } finally {
       setSaving(false);
     }
@@ -97,11 +96,6 @@ export default function SavedSignatureEditor({ savedSignature: initial }: Props)
         >
           Crear firma
         </button>
-      )}
-      {message && (
-        <p className={`mt-2 text-sm ${message.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>
-          {message}
-        </p>
       )}
     </div>
   );

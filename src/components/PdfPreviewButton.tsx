@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { generatePdf } from './PdfExporter';
+import { toast } from './Toast';
 
 interface Props {
   notaId: number;
@@ -23,7 +24,7 @@ export default function PdfPreviewButton({ notaId, username, notaPrefix = 'NS' }
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err: any) {
-      alert(err.message || 'Error al generar PDF');
+      toast(err.message || 'Error al generar PDF', 'error');
     } finally {
       setLoading(false);
     }
@@ -39,7 +40,7 @@ export default function PdfPreviewButton({ notaId, username, notaPrefix = 'NS' }
       const doc = await generatePdf(data, username, notaPrefix);
       doc.save(`${notaPrefix}-${String(data.numero).padStart(4, '0')}.pdf`);
     } catch (err: any) {
-      alert(err.message || 'Error al generar PDF');
+      toast(err.message || 'Error al generar PDF', 'error');
     } finally {
       setLoading(false);
     }

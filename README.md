@@ -5,7 +5,7 @@ Sistema web interno para digitalizar el formulario **FO-SF-001 REV.3** (Autoriza
 ## Requisitos
 
 - **Windows 10/11** (o Linux/macOS para desarrollo)
-- **Node.js 22 LTS** o superior — [Descargar](https://nodejs.org/)
+- **Node.js 24 LTS** o superior — [Descargar](https://nodejs.org/)
 
 ## Instalacion
 
@@ -79,12 +79,16 @@ El sistema se abrira automaticamente en el navegador en **http://localhost:4321*
 ## Funcionalidades
 
 - **Crear notas de salida** — Formulario digital replica del FO-SF-001 REV.3
-- **Exportar PDF** — Genera PDF en formato A4 landscape identico al formulario fisico
+- **Exportar PDF** — Genera PDF en formato A4 landscape identico al formulario fisico con firmas embebidas
 - **Registro de notas** — Busqueda, paginacion y ordenamiento
 - **Anular/Restaurar notas** — Solo administradores
+- **Firma digital** — Firma con canvas tactil o imagen, enlaces de firma por token para externos
+- **Notificaciones por email** — Solicitud de firma y confirmacion de firmas completadas (SMTP/Resend)
+- **Notificaciones in-app** — Campana con badge de no leidas, polling cada 60s
+- **Vista de pendientes** — Pestana "Pendientes mi firma" con badge en sidebar
 - **Gestion de usuarios** — Crear, editar, activar/desactivar, resetear contrasena
 - **Administrar catalogos** — Departamentos, vehiculos, personal (CRUD + importacion CSV)
-- **Configuracion** — Nombre de empresa, prefijo y contador de notas
+- **Configuracion** — Nombre de empresa, prefijo/contador de notas, SMTP
 - **Recuperacion de contrasena** — Sistema offline con token de 6 digitos
 
 ## Despliegue en servidor (Hetzner / VPS)
@@ -132,6 +136,27 @@ tail -f /opt/pa-notas/data/logs/app.log  # logs de la app
 
 Ejecutar el mismo comando de deploy. La base de datos se preserva automaticamente.
 
+## Configuracion SMTP (email)
+
+El sistema envia correos para solicitudes de firma y notificaciones. Se puede configurar de dos formas:
+
+### Opcion 1: Variables de entorno (.env)
+
+```env
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=re_tu_api_key
+SMTP_FROM=PetroAlianza <onboarding@resend.dev>
+SMTP_ENABLED=1
+```
+
+### Opcion 2: Panel de administracion
+
+Ir a Admin > Configuracion > Correo Electronico (SMTP) y configurar desde la interfaz.
+
+La configuracion en base de datos tiene prioridad sobre las variables de entorno.
+
 ## Logs
 
 La aplicacion escribe logs en `data/logs/app.log`. Se registran:
@@ -140,6 +165,7 @@ La aplicacion escribe logs en `data/logs/app.log`. Se registran:
 - Inicios de sesion exitosos y fallidos
 - Creacion de notas
 - Cambios de estado (anular/restaurar)
+- Firmas digitales (via token y autenticadas)
 - Intentos de acceso no autorizado
 
 Los archivos se rotan automaticamente al llegar a 5 MB (se mantienen hasta 5 archivos historicos).
@@ -186,9 +212,9 @@ npm run db:studio  # Abrir Drizzle Studio (explorar BD)
 
 ```
 src/
-  components/    # Componentes React (NotaForm, NotasList, AdminCrud, etc.)
+  components/    # Componentes React (NotaForm, NotasList, SignaturePad, etc.)
   layouts/       # Layouts Astro (AppLayout, Layout)
-  lib/           # Logica de negocio (auth, db, schema, middleware, format)
+  lib/           # Logica de negocio (auth, db, schema, signatures, email, etc.)
   pages/         # Paginas y API endpoints
   styles/        # CSS global (Tailwind v4)
 data/            # Base de datos SQLite
@@ -205,6 +231,8 @@ tests/           # Tests unitarios e integracion
 | Base de datos| SQLite (better-sqlite3)       |
 | ORM          | Drizzle ORM                   |
 | Auth         | JWT (httpOnly cookie) + bcrypt|
+| Firmas       | signature_pad                 |
+| Email        | nodemailer (SMTP/Resend)      |
 | PDF          | jsPDF                         |
 | Tests        | Vitest                        |
 

@@ -125,6 +125,7 @@ export const signatureTokens = sqliteTable('signature_tokens', {
   token: text('token').unique().notNull(),
   recipientEmail: text('recipient_email').notNull().default(''),
   recipientName: text('recipient_name').notNull(),
+  recipientCi: text('recipient_ci').notNull().default(''),
   expiresAt: text('expires_at').notNull(),
   usedAt: text('used_at'),
   createdAt: text('created_at').notNull().default(sql`(datetime('now'))`),

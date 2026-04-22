@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import NotaReadOnly from './NotaReadOnly';
 import SignaturePad from './SignaturePad';
+import { toast } from './Toast';
 
 interface Props {
   token: string;
@@ -46,7 +47,7 @@ export default function SigningPage({ token, notaPrefix }: Props) {
       setSuccess(true);
       setAllSigned(data.allSigned);
     } catch (err: any) {
-      alert(err.message || 'Error al registrar firma');
+      toast(err.message || 'Error al registrar firma', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -97,11 +98,8 @@ export default function SigningPage({ token, notaPrefix }: Props) {
       {/* Header */}
       <header className="bg-pa-dark text-white py-4 px-6">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 bg-pa-orange rounded flex items-center justify-center text-sm font-bold">PA</div>
-          <div>
-            <h1 className="text-lg font-semibold">PetroAlianza</h1>
-            <p className="text-xs text-gray-400">Firma de Autorización de Salida</p>
-          </div>
+          <img src="/pa-logo-white.png" alt="PetroAlianza" className="h-8" />
+          <p className="text-sm text-gray-300">Firma de Autorización de Salida</p>
         </div>
       </header>
 

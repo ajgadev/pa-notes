@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { profiles } from '../../../lib/schema';
-import { eq } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { isValidSignatureData } from '../../../lib/signatures';
 
 export const PUT: APIRoute = async ({ request, locals }) => {
   const { signatureData } = await request.json();
@@ -16,6 +16,13 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
   if (signatureData.length > 500 * 1024) {
     return new Response(JSON.stringify({ error: 'La firma excede el tamaño máximo (500KB)' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!isValidSignatureData(signatureData)) {
+    return new Response(JSON.stringify({ error: 'Formato de firma inválido. Debe ser una imagen PNG o JPEG.' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

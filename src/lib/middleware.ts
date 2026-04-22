@@ -37,3 +37,14 @@ export function isPublicPath(path: string): boolean {
 export function isAdminPath(path: string): boolean {
   return ADMIN_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
+
+export function getClientIp(request: Request): string {
+  const realIp = request.headers.get('x-real-ip')?.trim();
+  if (realIp) return realIp;
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const parts = forwarded.split(',').map((s) => s.trim());
+    return parts[parts.length - 1] || 'unknown';
+  }
+  return 'unknown';
+}

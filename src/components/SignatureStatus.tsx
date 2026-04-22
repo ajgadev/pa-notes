@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import SignaturePad from './SignaturePad';
+import { toast } from './Toast';
 
 interface RoleStatus {
   role: string;
@@ -56,7 +57,7 @@ export default function SignatureStatus({ notaId, userCi, savedSignature }: Prop
       document.getElementById('edit-nota-btn')?.remove();
       window.dispatchEvent(new CustomEvent('notas-updated'));
     } catch (err: any) {
-      alert(err.message || 'Error al firmar');
+      toast(err.message || 'Error al firmar', 'error');
     } finally {
       setSubmitting(false);
     }

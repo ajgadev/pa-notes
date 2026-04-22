@@ -128,6 +128,7 @@ export function createTestDb() {
       token TEXT NOT NULL UNIQUE,
       recipient_email TEXT NOT NULL DEFAULT '',
       recipient_name TEXT NOT NULL DEFAULT '',
+      recipient_ci TEXT NOT NULL DEFAULT '',
       expires_at TEXT NOT NULL,
       used_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))

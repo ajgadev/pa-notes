@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import NotificationBell from '../components/NotificationBell';
+import ToastContainer from '../components/Toast';
+import ConfirmDialogContainer from '../components/ConfirmDialog';
 import { db } from '../lib/db';
 import { profiles } from '../lib/schema';
 import { eq } from 'drizzle-orm';
@@ -116,6 +118,9 @@ const displayName = [profile?.nombre, profile?.apellido].filter(Boolean).join(' 
         <slot />
       </main>
     </div>
+
+    <ToastContainer client:load />
+    <ConfirmDialogContainer client:load />
 
     <script>
       document.getElementById('logoutBtn')?.addEventListener('click', async () => {

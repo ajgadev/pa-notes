@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { toast } from './Toast';
 
 interface Column {
   key: string;
@@ -112,9 +113,9 @@ export default function AdminCrud({ title, apiUrl, columns, csvFormat, csvImport
       setCsvPreview(null);
       setCsvFile(null);
       fetchItems();
-      alert(`Importados: ${data.imported}, Duplicados ignorados: ${data.duplicates}`);
+      toast(`Importados: ${data.imported}, Duplicados ignorados: ${data.duplicates}`);
     } else {
-      alert(data.error);
+      toast(data.error, 'error');
     }
   };
 

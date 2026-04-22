@@ -66,6 +66,7 @@ export default function AdminConfig() {
       });
       if (res.ok) {
         setSmtpMessage({ text: 'Configuración SMTP guardada', ok: true });
+        setTimeout(() => setSmtpMessage(null), 3000);
       } else {
         const data = await res.json();
         setSmtpMessage({ text: data.error || 'Error al guardar', ok: false });
@@ -84,6 +85,7 @@ export default function AdminConfig() {
     const data = await res.json();
     setSmtpTestResult(data);
     setSmtpTesting(false);
+    if (data.ok) setTimeout(() => setSmtpTestResult(null), 3000);
   };
 
   const saveCompanyName = async () => {
@@ -92,7 +94,7 @@ export default function AdminConfig() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_name: companyName }),
     });
-    if (res.ok) setMessage('Nombre de empresa actualizado');
+    if (res.ok) { setMessage('Nombre de empresa actualizado'); setTimeout(() => setMessage(''), 3000); }
   };
 
   const handleCounterChange = async () => {
@@ -113,7 +115,7 @@ export default function AdminConfig() {
     });
     const data = await res.json();
     if (res.ok) {
-      setMessage('Contador actualizado');
+      setMessage('Contador actualizado'); setTimeout(() => setMessage(''), 3000);
       setCounterStep(0);
     } else {
       setMessage(data.error);
@@ -157,7 +159,7 @@ export default function AdminConfig() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nota_prefix: notaPrefix }),
               });
-              if (res.ok) setMessage('Prefijo actualizado');
+              if (res.ok) { setMessage('Prefijo actualizado'); setTimeout(() => setMessage(''), 3000); }
             }}
             className="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white"
           >

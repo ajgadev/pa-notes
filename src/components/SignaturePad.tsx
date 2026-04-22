@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import SignaturePadLib from 'signature_pad';
+import { toast } from './Toast';
 
 interface Props {
   onSubmit: (dataUrl: string) => void;
@@ -66,7 +67,7 @@ export default function SignaturePad({ onSubmit, onCancel, savedSignature, submi
     if (!file) return;
 
     if (file.size > 500 * 1024) {
-      alert('La imagen excede 500KB. Por favor use una imagen más pequeña.');
+      toast('La imagen excede 500KB. Por favor use una imagen más pequeña.', 'error');
       return;
     }
 

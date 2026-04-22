@@ -116,6 +116,9 @@ if [ -f "$DB_FILE" ]; then
   sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS signature_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT, nota_id INTEGER NOT NULL REFERENCES notas(id) ON DELETE CASCADE, role TEXT NOT NULL, token TEXT UNIQUE NOT NULL, recipient_email TEXT NOT NULL DEFAULT '', recipient_name TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
   sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, type TEXT NOT NULL, message TEXT NOT NULL, nota_id INTEGER, read INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
   sqlite3 "$DB_FILE" "CREATE TABLE IF NOT EXISTS email_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, to_address TEXT NOT NULL, subject TEXT NOT NULL, body_html TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, last_attempt TEXT, error TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));" 2>/dev/null || true
+
+  # Add recipient_ci column to signature_tokens (16.8)
+  sqlite3 "$DB_FILE" "ALTER TABLE signature_tokens ADD COLUMN recipient_ci TEXT NOT NULL DEFAULT '';" 2>/dev/null || true
 fi
 
 # Only seed on first deploy (no users table or zero users)

@@ -2,8 +2,9 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { config } from '../../../lib/schema';
 import { eq } from 'drizzle-orm';
-import { getSmtpConfig, testSmtpConnection } from '../../../lib/email';
+import { getSmtpConfig, testSmtpConnection, encryptValue } from '../../../lib/email';
 import { audit } from '../../../lib/audit';
+import { getClientIp } from '../../../lib/middleware';
 
 const SMTP_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from', 'smtp_enabled'] as const;
 
@@ -38,7 +39,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   if (body.host !== undefined) updates.smtp_host = String(body.host);
   if (body.port !== undefined) updates.smtp_port = String(body.port);
   if (body.user !== undefined) updates.smtp_user = String(body.user);
-  if (body.pass !== undefined && body.pass !== '••••••••') updates.smtp_pass = String(body.pass);
+  if (body.pass !== undefined && body.pass !== '••••••••') updates.smtp_pass = encryptValue(String(body.pass));
   if (body.from !== undefined) updates.smtp_from = String(body.from);
   if (body.enabled !== undefined) updates.smtp_enabled = body.enabled ? '1' : '0';
 
@@ -48,7 +49,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
       .run();
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '';
+  const ip = getClientIp(request);
   audit({
     userId: locals.user.userId,
     username: locals.user.username,
