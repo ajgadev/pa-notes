@@ -45,9 +45,15 @@ echo "[1/5] Pulling latest $BRANCH..."
 git fetch origin
 git reset --hard "origin/$BRANCH"
 
-# 2. Install dependencies
+# 2. Install dependencies (include devDependencies for drizzle-kit and tsx)
 echo "[2/5] Installing dependencies..."
-npm install
+npm install 2>&1 | tail -5
+# Verify drizzle-kit is available
+if ! npx drizzle-kit --version &>/dev/null; then
+  echo "  Dev deps missing, reinstalling..."
+  rm -rf node_modules
+  npm install 2>&1 | tail -5
+fi
 
 # 3. Run migrations
 echo "[3/5] Running migrations..."
