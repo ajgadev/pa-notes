@@ -356,6 +356,20 @@ Reemplazar el sistema actual de 2 roles fijos (`admin`/`operador`) por un sistem
 
 ---
 
+## Fase 18 — CI/CD: GitHub Actions + entorno de desarrollo
+
+- [x] Script `scripts/setup-server.sh` — setup inicial del servidor con ambos entornos (prod + dev)
+- [x] Script `scripts/ci-deploy.sh` — deploy parametrizado (`prod` o `dev`) para CI
+- [x] Workflow `.github/workflows/deploy-prod.yml` — deploy automático al hacer push a `main`
+- [x] Workflow `.github/workflows/deploy-dev.yml` — deploy automático al hacer push a `develop`
+- [x] Caddyfile con ambos dominios (`petroalianza.duckdns.org` + `petroalianza-dev.duckdns.org`)
+- [x] Servicio systemd `pa-notas-dev.service` (puerto 4322, DB separada)
+- [ ] Configurar secretos en GitHub: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`
+- [ ] Clonar repo en servidor como `/opt/pa-notas` (main) y `/opt/pa-notas-dev` (develop)
+- [ ] Ejecutar `setup-server.sh` en servidor para setup inicial
+
+---
+
 ## Futuro — Unificación de idioma (schema + API en inglés)
 
 Actualmente el código mezcla inglés (infra: `users`, `departments`, `active`, `createdAt`) con español (dominio: `personal`, `notas`, `nombre`, `apellido`, `placa`). Para facilitar mantenimiento futuro por desarrolladores externos:

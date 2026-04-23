@@ -182,11 +182,19 @@ if [ -n "$DOMAIN" ]; then
   cat > /etc/caddy/Caddyfile << CADDYEOF
 $DOMAIN {
     reverse_proxy 127.0.0.1:$PORT {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+petroalianza-dev.duckdns.org {
+    reverse_proxy 127.0.0.1:4322 {
+        header_up X-Real-IP {remote_host}
         header_up X-Forwarded-Proto {scheme}
     }
 }
 CADDYEOF
-  echo "[OK] Caddy configured for $DOMAIN (auto HTTPS)"
+  echo "[OK] Caddy configured for $DOMAIN + dev (auto HTTPS)"
 else
   cat > /etc/caddy/Caddyfile << CADDYEOF
 :80 {
