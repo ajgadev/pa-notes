@@ -44,7 +44,7 @@ npm install --omit=dev
 
 # 3. Run migrations
 echo "[3/5] Running migrations..."
-npx drizzle-kit push --force 2>/dev/null || true
+npx drizzle-kit push --force || echo "[WARN] drizzle-kit push had issues, applying manual migrations"
 
 if [ -f "$DB_FILE" ]; then
   sqlite3 "$DB_FILE" "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0;" 2>/dev/null || true
