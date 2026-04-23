@@ -29,6 +29,7 @@ fi
 echo "=== Deploying $ENV ($BRANCH -> $APP_DIR) ==="
 
 cd "$APP_DIR"
+export GIT_SSH_COMMAND="ssh -i /root/.ssh/deploy_key -o StrictHostKeyChecking=no"
 
 # 1. Pull latest code
 echo "[1/5] Pulling latest $BRANCH..."
