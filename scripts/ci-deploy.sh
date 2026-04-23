@@ -33,6 +33,13 @@ export GIT_SSH_COMMAND="ssh -i /root/.ssh/deploy_key -o StrictHostKeyChecking=no
 git config --global --add safe.directory "$APP_DIR"
 mkdir -p "$APP_DIR/data/logs"
 
+# Load .env so drizzle-kit and seed scripts see DATABASE_URL, etc.
+if [ -f "$APP_DIR/.env" ]; then
+  set -a
+  source "$APP_DIR/.env"
+  set +a
+fi
+
 # 1. Pull latest code
 echo "[1/5] Pulling latest $BRANCH..."
 git fetch origin
