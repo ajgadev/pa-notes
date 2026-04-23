@@ -47,7 +47,7 @@ git reset --hard "origin/$BRANCH"
 
 # 2. Install dependencies
 echo "[2/5] Installing dependencies..."
-npm install --omit=dev
+npm install
 
 # 3. Run migrations
 echo "[3/5] Running migrations..."
