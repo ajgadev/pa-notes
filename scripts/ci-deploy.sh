@@ -30,6 +30,8 @@ echo "=== Deploying $ENV ($BRANCH -> $APP_DIR) ==="
 
 cd "$APP_DIR"
 export GIT_SSH_COMMAND="ssh -i /root/.ssh/deploy_key -o StrictHostKeyChecking=no"
+git config --global --add safe.directory "$APP_DIR"
+mkdir -p "$APP_DIR/data/logs"
 
 # 1. Pull latest code
 echo "[1/5] Pulling latest $BRANCH..."
