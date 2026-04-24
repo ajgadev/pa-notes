@@ -44,9 +44,18 @@ interface NotaData {
   signatures?: SignatureInfo[];
 }
 
+interface RoleStatus {
+  role: string;
+  roleLabel: string;
+  signerName: string;
+  signed: boolean;
+  signedAt: string | null;
+}
+
 interface Props {
   nota: NotaData;
   notaPrefix?: string;
+  initialRoles?: RoleStatus[];
 }
 
 function Field({ label, value }: { label: string; value?: string | null }) {
@@ -66,9 +75,20 @@ const ROLE_MAP: Record<string, { label: string; nameField: keyof NotaData; ciFie
   aprobado: { label: 'Aprobado por', nameField: 'aproNombre', ciField: 'aproCi' },
 };
 
-export default function NotaReadOnly({ nota, notaPrefix = 'NS' }: Props) {
+export default function NotaReadOnly({ nota, notaPrefix = 'NS', initialRoles }: Props) {
   const formatNumero = (n: number) => `${notaPrefix}-${String(n).padStart(6, '0')}`;
   const [sigs, setSigs] = useState<SignatureInfo[]>(nota.signatures ?? []);
+
+  // Initialize from initialRoles if provided (public signing page)
+  useEffect(() => {
+    if (initialRoles?.length) {
+      setSigs(initialRoles.filter((r) => r.signed).map((r) => ({
+        role: r.role,
+        signedByName: r.signerName,
+        signedAt: r.signedAt ?? undefined,
+      })));
+    }
+  }, [initialRoles]);
 
   useEffect(() => {
     function refresh() {

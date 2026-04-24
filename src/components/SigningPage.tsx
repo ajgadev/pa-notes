@@ -13,6 +13,7 @@ export default function SigningPage({ token, notaPrefix }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notaData, setNotaData] = useState<any>(null);
   const [signerInfo, setSignerInfo] = useState<{ role: string; roleLabel: string; name: string } | null>(null);
+  const [roles, setRoles] = useState<{ role: string; roleLabel: string; signerName: string; signed: boolean; signedAt: string | null }[]>([]);
   const [success, setSuccess] = useState(false);
   const [allSigned, setAllSigned] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +30,7 @@ export default function SigningPage({ token, notaPrefix }: Props) {
       .then((data) => {
         setNotaData(data.nota);
         setSignerInfo(data.signer);
+        setRoles(data.roles || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -114,7 +116,7 @@ export default function SigningPage({ token, notaPrefix }: Props) {
         </div>
 
         {/* Read-only nota */}
-        <NotaReadOnly nota={notaData} notaPrefix={notaPrefix} />
+        <NotaReadOnly nota={notaData} notaPrefix={notaPrefix} initialRoles={roles} />
 
         {/* Signature section */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">

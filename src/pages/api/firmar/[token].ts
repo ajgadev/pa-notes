@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { db } from '../../../lib/db';
 import { notas, notaItems } from '../../../lib/schema';
 import { eq } from 'drizzle-orm';
-import { validateToken, recordSignature, getRoleLabel } from '../../../lib/signatures';
+import { validateToken, recordSignature, getRoleLabel, getSignaturesForNota, getSignerRoles } from '../../../lib/signatures';
 import { audit } from '../../../lib/audit';
 import { logger } from '../../../lib/logger';
 import { checkRateLimit } from '../../../lib/rate-limit';
@@ -28,6 +28,19 @@ export const GET: APIRoute = async ({ params, request }) => {
 
   const { token, nota } = result;
   const items = db.select().from(notaItems).where(eq(notaItems.notaId, nota.id)).all();
+  const sigs = getSignaturesForNota(nota.id);
+  const signerRoles = getSignerRoles(nota);
+
+  const roles = signerRoles.map((s) => {
+    const sig = sigs.find((sg) => sg.role === s.role);
+    return {
+      role: s.role,
+      roleLabel: getRoleLabel(s.role),
+      signerName: s.name,
+      signed: !!sig,
+      signedAt: sig?.signedAt ?? null,
+    };
+  });
 
   return new Response(JSON.stringify({
     nota: { ...nota, items },
@@ -36,6 +49,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       roleLabel: getRoleLabel(token.role as any),
       name: token.recipientName,
     },
+    roles,
   }), {
     headers: { 'Content-Type': 'application/json' },
   });
