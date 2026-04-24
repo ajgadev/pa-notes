@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from './Toast';
 
 interface SmtpState {
   host: string;
@@ -15,13 +16,10 @@ export default function AdminConfig() {
   const [notaPrefix, setNotaPrefix] = useState('');
   const [notaCounter, setNotaCounter] = useState('');
   const [stats, setStats] = useState<{ totalNotas: number; dbPath: string; version: string }>({ totalNotas: 0, dbPath: '', version: '' });
-  const [message, setMessage] = useState('');
   const [counterStep, setCounterStep] = useState(0);
   const [smtp, setSmtp] = useState<SmtpState>({ host: 'smtp.resend.com', port: '465', user: 'resend', pass: '', from: 'PetroAlianza <onboarding@resend.dev>', enabled: false, hasPassword: false });
   const [smtpSaving, setSmtpSaving] = useState(false);
-  const [smtpMessage, setSmtpMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [smtpTesting, setSmtpTesting] = useState(false);
-  const [smtpTestResult, setSmtpTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
 
   const fetchConfig = async () => {
     const res = await fetch('/api/config');
@@ -50,7 +48,6 @@ export default function AdminConfig() {
 
   const saveSmtp = async () => {
     setSmtpSaving(true);
-    setSmtpMessage(null);
     try {
       const res = await fetch('/api/config/smtp', {
         method: 'PUT',
@@ -65,14 +62,13 @@ export default function AdminConfig() {
         }),
       });
       if (res.ok) {
-        setSmtpMessage({ text: 'Configuración SMTP guardada', ok: true });
-        setTimeout(() => setSmtpMessage(null), 3000);
+        toast('Configuración SMTP guardada');
       } else {
         const data = await res.json();
-        setSmtpMessage({ text: data.error || 'Error al guardar', ok: false });
+        toast(data.error || 'Error al guardar', 'error');
       }
     } catch {
-      setSmtpMessage({ text: 'Error de conexión', ok: false });
+      toast('Error de conexión', 'error');
     } finally {
       setSmtpSaving(false);
     }
@@ -80,12 +76,14 @@ export default function AdminConfig() {
 
   const testSmtp = async () => {
     setSmtpTesting(true);
-    setSmtpTestResult(null);
     const res = await fetch('/api/config/smtp', { method: 'POST' });
     const data = await res.json();
-    setSmtpTestResult(data);
+    if (data.ok) {
+      toast('Conexión SMTP exitosa');
+    } else {
+      toast(data.error || 'Error de conexión SMTP', 'error');
+    }
     setSmtpTesting(false);
-    if (data.ok) setTimeout(() => setSmtpTestResult(null), 3000);
   };
 
   const saveCompanyName = async () => {
@@ -94,7 +92,7 @@ export default function AdminConfig() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company_name: companyName }),
     });
-    if (res.ok) { setMessage('Nombre de empresa actualizado'); setTimeout(() => setMessage(''), 3000); }
+    if (res.ok) { toast('Nombre de empresa actualizado'); }
   };
 
   const handleCounterChange = async () => {
@@ -115,10 +113,10 @@ export default function AdminConfig() {
     });
     const data = await res.json();
     if (res.ok) {
-      setMessage('Contador actualizado'); setTimeout(() => setMessage(''), 3000);
+      toast('Contador actualizado');
       setCounterStep(0);
     } else {
-      setMessage(data.error);
+      toast(data.error, 'error');
     }
   };
 
@@ -159,7 +157,7 @@ export default function AdminConfig() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nota_prefix: notaPrefix }),
               });
-              if (res.ok) { setMessage('Prefijo actualizado'); setTimeout(() => setMessage(''), 3000); }
+              if (res.ok) { toast('Prefijo actualizado'); }
             }}
             className="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white"
           >
@@ -247,16 +245,6 @@ export default function AdminConfig() {
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
               {smtpTesting ? 'Probando...' : 'Probar conexión'}
             </button>
-            {smtpTestResult && (
-              <span className={`text-sm ${smtpTestResult.ok ? 'text-green-600' : 'text-red-500'}`}>
-                {smtpTestResult.ok ? 'Conexión exitosa' : smtpTestResult.error}
-              </span>
-            )}
-            {smtpMessage && (
-              <span className={`text-sm ${smtpMessage.ok ? 'text-green-600' : 'text-red-500'}`}>
-                {smtpMessage.text}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -274,9 +262,6 @@ export default function AdminConfig() {
         </dl>
       </div>
 
-      {message && (
-        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</div>
-      )}
     </div>
   );
 }

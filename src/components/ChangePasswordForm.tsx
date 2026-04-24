@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PasswordInput from './PasswordInput';
 import PasswordStrength, { isPasswordValid } from './PasswordStrength';
+import { toast } from './Toast';
 
 interface Props {
   endpoint: string;
@@ -22,14 +23,12 @@ export default function ChangePasswordForm({
   const [current, setCurrent] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = isPasswordValid(newPassword) && newPassword === confirm && (!requireCurrent || current.length > 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMsg(null);
     if (!canSubmit) return;
     setSubmitting(true);
 
@@ -45,14 +44,14 @@ export default function ChangePasswordForm({
       });
       const data = await res.json();
       if (res.ok) {
-        setMsg({ text: successMessage, ok: true });
+        toast(successMessage);
         setTimeout(() => (window.location.href = successRedirect), 1500);
       } else {
-        setMsg({ text: data.error || 'Error', ok: false });
+        toast(data.error || 'Error', 'error');
         setSubmitting(false);
       }
     } catch {
-      setMsg({ text: 'Error de conexión', ok: false });
+      toast('Error de conexión', 'error');
       setSubmitting(false);
     }
   };
@@ -79,11 +78,6 @@ export default function ChangePasswordForm({
           </p>
         )}
       </div>
-      {msg && (
-        <div className={`rounded-lg p-3 text-sm ${msg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-          {msg.text}
-        </div>
-      )}
       <button
         type="submit"
         disabled={!canSubmit || submitting}

@@ -43,7 +43,6 @@ const savedSignature = profile?.savedSignature ?? null;
           <label class="mb-1 block text-xs font-medium text-gray-600">Email</label>
           <input type="email" id="profileEmail" value={userRow?.email || ''} class="w-full rounded-md border px-3 py-2 text-sm focus:border-pa-orange focus:outline-none" placeholder="correo@ejemplo.com" />
         </div>
-        <div id="profileMsg" class="hidden rounded-lg p-3 text-sm"></div>
         <button type="submit" class="rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white">
           Guardar Datos
         </button>
@@ -69,13 +68,12 @@ const savedSignature = profile?.savedSignature ?? null;
   </div>
 
   <script>
-    // Profile form
+    import { toast } from '../components/Toast';
+
     const profileForm = document.getElementById('profileForm') as HTMLFormElement;
-    const profileMsg = document.getElementById('profileMsg') as HTMLDivElement;
 
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      profileMsg.classList.add('hidden');
 
       const nombre = (document.getElementById('profileNombre') as HTMLInputElement).value;
       const apellido = (document.getElementById('profileApellido') as HTMLInputElement).value;
@@ -89,15 +87,10 @@ const savedSignature = profile?.savedSignature ?? null;
       });
 
       if (res.ok) {
-        profileMsg.textContent = 'Datos actualizados correctamente';
-        profileMsg.className = 'rounded-lg bg-green-50 p-3 text-sm text-green-700';
-        setTimeout(() => profileMsg.classList.add('hidden'), 3000);
+        toast('Datos actualizados correctamente');
       } else {
-        profileMsg.textContent = 'Error al guardar';
-        profileMsg.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-600';
+        toast('Error al guardar', 'error');
       }
-      profileMsg.classList.remove('hidden');
     });
-
   </script>
 </AppLayout>
