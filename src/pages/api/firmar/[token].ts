@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   });
 };
 
-export const POST: APIRoute = async ({ params, request }) => {
+export const POST: APIRoute = async ({ params, request, url }) => {
   const ip = getClientIp(request);
   const rl = checkRateLimit(`firmar:${ip}`);
   if (!rl.allowed) {
@@ -81,6 +81,7 @@ export const POST: APIRoute = async ({ params, request }) => {
     signatureData,
     ip: signIp,
     tokenId: token.id,
+    baseUrl: url.origin,
   });
 
   if (!signResult.success) {

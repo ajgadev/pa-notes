@@ -97,6 +97,7 @@ export function createSignatureTokens(notaId: number, nota: Parameters<typeof ge
         role: ROLE_LABELS[signer.role],
         signerName: signer.name,
         url: `${baseUrl}/firmar/${token}`,
+        baseUrl,
       });
       queueEmail(email, tmpl.subject, tmpl.html);
       emailedCis.add(signer.ci);
@@ -145,6 +146,7 @@ interface RecordSignatureParams {
   signatureData: string;
   ip?: string;
   tokenId?: number;
+  baseUrl?: string;
 }
 
 export function isValidSignatureData(data: string): boolean {
@@ -243,7 +245,7 @@ export function recordSignature(params: RecordSignatureParams): { success: boole
     const creatorEmail = creator?.email?.trim();
 
     if (creatorEmail) {
-      const tmpl = allSignedTemplate({ numero: nota.numero, creatorName });
+      const tmpl = allSignedTemplate({ numero: nota.numero, creatorName, baseUrl: params.baseUrl || '' });
       queueEmail(creatorEmail, tmpl.subject, tmpl.html);
     }
   }

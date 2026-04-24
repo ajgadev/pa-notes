@@ -1,5 +1,3 @@
-import { PA_LOGO_BASE64 } from './email-logo';
-
 const PA_ORANGE = '#FF6101';
 const PA_DARK = '#191825';
 
@@ -12,7 +10,8 @@ function esc(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function layout(content: string): string {
+function layout(content: string, baseUrl: string): string {
+  const logoUrl = `${baseUrl}/pa-logo-white.png`;
   return `
 <!DOCTYPE html>
 <html>
@@ -20,7 +19,7 @@ function layout(content: string): string {
 <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f5f5f5">
   <div style="max-width:560px;margin:24px auto;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb">
     <div style="background:${PA_DARK};padding:16px 24px">
-      <img src="data:image/png;base64,${PA_LOGO_BASE64}" alt="PetroAlianza" style="height:32px" />
+      <img src="${logoUrl}" alt="PetroAlianza" style="height:32px" />
     </div>
     <div style="padding:24px">
       ${content}
@@ -38,6 +37,7 @@ export function signatureRequestTemplate(params: {
   role: string;
   signerName: string;
   url: string;
+  baseUrl: string;
 }): { subject: string; html: string } {
   const name = esc(params.signerName);
   const role = esc(params.role);
@@ -66,13 +66,14 @@ export function signatureRequestTemplate(params: {
         Este enlace expira en 7 días. Si no puede hacer clic en el botón, copie y pegue esta URL en su navegador:<br>
         <a href="${url}" style="color:${PA_ORANGE};word-break:break-all">${url}</a>
       </p>
-    `),
+    `, params.baseUrl),
   };
 }
 
 export function allSignedTemplate(params: {
   numero: number;
   creatorName: string;
+  baseUrl: string;
 }): { subject: string; html: string } {
   const creator = esc(params.creatorName);
   const numero = esc(String(params.numero));
@@ -90,6 +91,6 @@ export function allSignedTemplate(params: {
       <p style="margin:0;font-size:14px;color:#374151">
         Puede descargar el PDF final desde el sistema.
       </p>
-    `),
+    `, params.baseUrl),
   };
 }

@@ -7,7 +7,7 @@ import { audit } from '../../../../../lib/audit';
 import { logger } from '../../../../../lib/logger';
 import { getClientIp } from '../../../../../lib/middleware';
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+export const POST: APIRoute = async ({ params, request, locals, url }) => {
   const user = locals.user;
   const id = parseInt(params.id!);
   const body = await request.json();
@@ -60,6 +60,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     signedByCi: userCi,
     signatureData,
     ip,
+    baseUrl: url.origin,
   });
 
   if (!result.success) {

@@ -91,23 +91,59 @@ El sistema se abrira automaticamente en el navegador en **http://localhost:4321*
 - **Configuracion** — Nombre de empresa, prefijo/contador de notas, SMTP
 - **Recuperacion de contrasena** — Sistema offline con token de 6 digitos
 
-## Despliegue en servidor (Hetzner / VPS)
+## Arquitectura del servidor
 
-Para desplegar en un servidor Ubuntu con HTTPS gratuito:
+El servidor Hetzner (Ubuntu) ejecuta:
 
-### 1. Obtener dominio gratis (opcional, para HTTPS)
+```
+Browser ──HTTPS──► Caddy (puerto 443) ──HTTP──► Node.js (puerto 4321/4322)
+```
+
+- **Caddy** — proxy reverso que maneja HTTPS automaticamente (certificados Let's Encrypt gratis). Recibe trafico en los puertos 80/443 y lo redirige a la app Node.js. Tambien envia el IP real del cliente via header `X-Real-IP`.
+- **systemd** — mantiene la app Node.js corriendo. Si la app se cae, systemd la reinicia automaticamente. Tambien la inicia al arrancar el servidor.
+- **SQLite** — base de datos almacenada en `/opt/pa-notas/data/`. No requiere servidor de base de datos externo.
+
+### Entornos
+
+| | Produccion | Desarrollo |
+|---|---|---|
+| URL | `petroalianza.duckdns.org` | `petroalianza-dev.duckdns.org` |
+| Directorio | `/opt/pa-notas` | `/opt/pa-notas-dev` |
+| Puerto | 4321 | 4322 |
+| Branch | `main` | `develop` |
+| Servicio | `pa-notas` | `pa-notas-dev` |
+| Base de datos | `petroalianza.db` | `petroalianza-dev.db` |
+
+## CI/CD (GitHub Actions)
+
+El deploy es automatico via GitHub Actions:
+
+- Push a `main` → despliega produccion
+- Push a `develop` → despliega desarrollo
+
+Los workflows (`.github/workflows/`) se conectan al servidor via SSH y ejecutan `scripts/ci-deploy.sh`, que hace: `git pull` → `npm install` → migraciones → `npm run build` → `systemctl restart`.
+
+### Secretos requeridos en GitHub
+
+En el repositorio → Settings → Secrets and variables → Actions:
+
+- `SSH_HOST` — IP del servidor
+- `SSH_USER` — `root`
+- `SSH_PRIVATE_KEY` — llave privada SSH (generada en el servidor con `ssh-keygen`)
+
+## Despliegue manual (primera vez)
+
+Para el setup inicial en un servidor Ubuntu nuevo:
+
+### 1. Obtener dominio gratis (para HTTPS)
 
 1. Ir a [duckdns.org](https://www.duckdns.org) e iniciar sesion con Google/GitHub
-2. Crear un subdominio (ej. `petroalianza` → `petroalianza.duckdns.org`)
-3. Apuntar el IP del servidor
+2. Crear subdominios (ej. `petroalianza` y `petroalianza-dev`)
+3. Apuntar ambos al IP del servidor
 
 ### 2. Desplegar
 
 ```bash
-# Solo HTTP (sin dominio)
-./scripts/deploy.sh <ip-del-servidor>
-
-# Con HTTPS (con dominio)
 ./scripts/deploy.sh <ip-del-servidor> petroalianza.duckdns.org
 ```
 
@@ -126,15 +162,15 @@ Si usa Hetzner Cloud Firewall, agregar reglas TCP 80 y 443 desde la consola web.
 ### 4. Comandos utiles en el servidor
 
 ```bash
-systemctl status pa-notas      # estado de la app
-systemctl restart pa-notas     # reiniciar app
-journalctl -u pa-notas -f      # logs del sistema
-tail -f /opt/pa-notas/data/logs/app.log  # logs de la app
+systemctl status pa-notas          # estado produccion
+systemctl status pa-notas-dev      # estado desarrollo
+systemctl restart pa-notas         # reiniciar produccion
+systemctl restart pa-notas-dev     # reiniciar desarrollo
+journalctl -u pa-notas -f          # logs del sistema (prod)
+journalctl -u pa-notas-dev -f      # logs del sistema (dev)
+tail -f /opt/pa-notas/data/logs/app.log      # logs de la app (prod)
+tail -f /opt/pa-notas-dev/data/logs/app.log  # logs de la app (dev)
 ```
-
-### 5. Re-desplegar (actualizar)
-
-Ejecutar el mismo comando de deploy. La base de datos se preserva automaticamente.
 
 ## Configuracion SMTP (email)
 

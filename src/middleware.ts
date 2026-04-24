@@ -99,7 +99,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const MUTATION_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH'];
   if (MUTATION_METHODS.includes(method) && path.startsWith('/api/')) {
     const origin = context.request.headers.get('origin');
-    const host = context.url.host;
+    const host = context.request.headers.get('x-forwarded-host') || context.request.headers.get('host') || context.url.host;
     if (origin && new URL(origin).host !== host) {
       logger.warn(`CSRF blocked ${method} ${path}`, { origin, host, user: user.username });
       return new Response(JSON.stringify({ error: 'Solicitud rechazada (CSRF)' }), {
