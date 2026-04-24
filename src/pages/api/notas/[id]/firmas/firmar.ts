@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { recordSignature, getSignerRoles, getRoleLabel, type SignatureRole } from '../../../../../lib/signatures';
 import { audit } from '../../../../../lib/audit';
 import { logger } from '../../../../../lib/logger';
-import { getClientIp } from '../../../../../lib/middleware';
+import { getClientIp, getPublicBaseUrl } from '../../../../../lib/middleware';
 
 export const POST: APIRoute = async ({ params, request, locals, url }) => {
   const user = locals.user;
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ params, request, locals, url }) => {
     signedByCi: userCi,
     signatureData,
     ip,
-    baseUrl: url.origin,
+    baseUrl: getPublicBaseUrl(request, url),
   });
 
   if (!result.success) {

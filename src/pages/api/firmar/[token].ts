@@ -6,7 +6,7 @@ import { validateToken, recordSignature, getRoleLabel } from '../../../lib/signa
 import { audit } from '../../../lib/audit';
 import { logger } from '../../../lib/logger';
 import { checkRateLimit } from '../../../lib/rate-limit';
-import { getClientIp } from '../../../lib/middleware';
+import { getClientIp, getPublicBaseUrl } from '../../../lib/middleware';
 
 export const GET: APIRoute = async ({ params, request }) => {
   const ip = getClientIp(request);
@@ -81,7 +81,7 @@ export const POST: APIRoute = async ({ params, request, url }) => {
     signatureData,
     ip: signIp,
     tokenId: token.id,
-    baseUrl: url.origin,
+    baseUrl: getPublicBaseUrl(request, url),
   });
 
   if (!signResult.success) {

@@ -38,6 +38,12 @@ export function isAdminPath(path: string): boolean {
   return ADMIN_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
+export function getPublicBaseUrl(request: Request, url: URL): string {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
+  const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '');
+  return `${proto}://${host}`;
+}
+
 export function getClientIp(request: Request): string {
   const realIp = request.headers.get('x-real-ip')?.trim();
   if (realIp) return realIp;

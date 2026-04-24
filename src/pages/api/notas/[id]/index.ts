@@ -3,6 +3,7 @@ import { db, sqlite } from '../../../../lib/db';
 import { notas, notaItems, signatures } from '../../../../lib/schema';
 import { eq } from 'drizzle-orm';
 import { hasAnySignature, createSignatureTokens } from '../../../../lib/signatures';
+import { getPublicBaseUrl } from '../../../../lib/middleware';
 
 export const GET: APIRoute = async ({ params }) => {
   const id = parseInt(params.id!);
@@ -84,7 +85,7 @@ export const PUT: APIRoute = async ({ params, request, url }) => {
     updateNota();
 
     // Regenerate signature tokens for updated signer assignments
-    const baseUrl = `${url.protocol}//${url.host}`;
+    const baseUrl = getPublicBaseUrl(request, url);
     createSignatureTokens(id, body, baseUrl);
 
     return new Response(JSON.stringify({ success: true }), {

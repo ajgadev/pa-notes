@@ -5,6 +5,7 @@ import { desc } from 'drizzle-orm';
 import { logger } from '../../../lib/logger';
 import { audit } from '../../../lib/audit';
 import { createSignatureTokens } from '../../../lib/signatures';
+import { getPublicBaseUrl } from '../../../lib/middleware';
 
 export const GET: APIRoute = async ({ url }) => {
   const page = parseInt(url.searchParams.get('page') || '1');
@@ -111,7 +112,7 @@ export const POST: APIRoute = async ({ request, locals, url }) => {
     audit({ userId: user.userId, username: user.username, action: 'nota_created', target: `nota#${result.numero}` });
 
     // Generate signature tokens for assigned signers
-    const baseUrl = `${url.protocol}//${url.host}`;
+    const baseUrl = getPublicBaseUrl(request, url);
     const tokenResult = createSignatureTokens(Number(result.id), body, baseUrl);
 
     return new Response(JSON.stringify({
