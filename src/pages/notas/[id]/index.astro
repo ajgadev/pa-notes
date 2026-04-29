@@ -95,6 +95,6 @@ const notaData = {
   <NotaReadOnly client:load nota={notaData} notaPrefix={notaPrefix} />
 
   <div class="mt-6">
-    <SignatureStatus client:load notaId={id} userCi={userCi} savedSignature={savedSignature} />
+    <SignatureStatus client:load notaId={id} userCi={userCi} savedSignature={savedSignature} isAdmin={user.role === 'admin'} />
   </div>
 </AppLayout>

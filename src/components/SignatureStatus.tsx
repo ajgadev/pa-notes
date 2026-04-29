@@ -19,15 +19,17 @@ interface Props {
   notaId: number;
   userCi: string;
   savedSignature?: string | null;
+  isAdmin?: boolean;
 }
 
-export default function SignatureStatus({ notaId, userCi, savedSignature }: Props) {
+export default function SignatureStatus({ notaId, userCi, savedSignature, isAdmin }: Props) {
   const [roles, setRoles] = useState<RoleStatus[]>([]);
   const [status, setStatus] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [signingRole, setSigningRole] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [resending, setResending] = useState<string | null>(null);
 
   async function loadStatus() {
     try {
@@ -63,6 +65,28 @@ export default function SignatureStatus({ notaId, userCi, savedSignature }: Prop
     }
   }
 
+  async function resendEmail(role?: string) {
+    const key = role || 'all';
+    setResending(key);
+    try {
+      const res = await fetch(`/api/notas/${notaId}/firmas/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: role || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast(data.message, 'success');
+      if (data.warnings?.length) {
+        data.warnings.forEach((w: string) => toast(w, 'error'));
+      }
+    } catch (err: any) {
+      toast(err.message || 'Error al reenviar', 'error');
+    } finally {
+      setResending(null);
+    }
+  }
+
   function copyTokenLink(tokenUrl: string) {
     const fullUrl = `${window.location.origin}${tokenUrl}`;
     navigator.clipboard.writeText(fullUrl).then(() => {
@@ -81,9 +105,22 @@ export default function SignatureStatus({ notaId, userCi, savedSignature }: Prop
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-700">Firmas</h3>
-        <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full bg-${statusColor}-100 text-${statusColor}-700`}>
-          {signedCount}/{roles.length} firmadas
-        </span>
+        <div className="flex items-center gap-2">
+          {isAdmin && signedCount < roles.length && (
+            <button
+              type="button"
+              onClick={() => resendEmail()}
+              disabled={resending === 'all'}
+              className="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
+              title="Reenviar correo a todos los firmantes pendientes"
+            >
+              {resending === 'all' ? 'Enviando...' : 'Reenviar todos'}
+            </button>
+          )}
+          <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full bg-${statusColor}-100 text-${statusColor}-700`}>
+            {signedCount}/{roles.length} firmadas
+          </span>
+        </div>
       </div>
 
       <div className="p-5 space-y-3">
@@ -126,13 +163,26 @@ export default function SignatureStatus({ notaId, userCi, savedSignature }: Prop
                     </button>
                   )}
                   {!r.signed && r.tokenUrl && !r.tokenExpired && (
-                    <button
-                      type="button"
-                      onClick={() => copyTokenLink(r.tokenUrl!)}
-                      className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      {copiedToken === r.tokenUrl ? 'Copiado!' : 'Copiar enlace'}
-                    </button>
+                    <>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => resendEmail(r.role)}
+                          disabled={resending === r.role}
+                          className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-white border border-blue-300 rounded hover:bg-blue-50 disabled:opacity-50"
+                          title="Reenviar correo de firma"
+                        >
+                          {resending === r.role ? 'Enviando...' : 'Reenviar'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => copyTokenLink(r.tokenUrl!)}
+                        className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        {copiedToken === r.tokenUrl ? 'Copiado!' : 'Copiar enlace'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
