@@ -11,19 +11,44 @@ export const GET: APIRoute = async ({ url }) => {
   const page = parseInt(url.searchParams.get('page') || '1');
   const limit = parseInt(url.searchParams.get('limit') || '20');
   const search = url.searchParams.get('q') || '';
+  const dateFrom = url.searchParams.get('dateFrom') || '';
+  const dateTo = url.searchParams.get('dateTo') || '';
+  const itemSearch = url.searchParams.get('itemSearch') || '';
   const offset = (page - 1) * limit;
 
-  let query = db.select().from(notas).orderBy(desc(notas.numero));
+  let allRows = db.select().from(notas).orderBy(desc(notas.numero)).all();
 
-  const allRows = search
-    ? query.all().filter((n) =>
-        String(n.numero).includes(search) ||
-        n.departamento?.toLowerCase().includes(search.toLowerCase()) ||
-        n.solicitante.toLowerCase().includes(search.toLowerCase()) ||
-        n.destino.toLowerCase().includes(search.toLowerCase()) ||
-        n.pozo?.toLowerCase().includes(search.toLowerCase())
-      )
-    : query.all();
+  if (search) {
+    const q = search.toLowerCase();
+    allRows = allRows.filter((n) =>
+      String(n.numero).includes(search) ||
+      n.departamento?.toLowerCase().includes(q) ||
+      n.solicitante.toLowerCase().includes(q) ||
+      n.destino.toLowerCase().includes(q) ||
+      n.pozo?.toLowerCase().includes(q)
+    );
+  }
+
+  if (dateFrom) {
+    allRows = allRows.filter((n) => n.fecha && n.fecha >= dateFrom);
+  }
+  if (dateTo) {
+    allRows = allRows.filter((n) => n.fecha && n.fecha <= dateTo);
+  }
+
+  if (itemSearch) {
+    const q = itemSearch.toLowerCase();
+    const notaIdsWithItem = new Set(
+      db.select().from(notaItems).all()
+        .filter((item) =>
+          item.descripcion?.toLowerCase().includes(q) ||
+          item.noParte?.toLowerCase().includes(q) ||
+          item.noSerial?.toLowerCase().includes(q)
+        )
+        .map((item) => item.notaId)
+    );
+    allRows = allRows.filter((n) => notaIdsWithItem.has(n.id));
+  }
 
   const total = allRows.length;
   const rows = allRows.slice(offset, offset + limit);

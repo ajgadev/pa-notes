@@ -65,6 +65,10 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
   const [sigWarnings, setSigWarnings] = useState<string[]>([]);
   const [tab, setTab] = useState<'todas' | 'pendientes'>('todas');
   const [pendingCount, setPendingCount] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [itemSearch, setItemSearch] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -81,9 +85,17 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
 
   const fetchNotas = async () => {
     setLoading(true);
-    const url = tab === 'pendientes'
-      ? '/api/notas/pendientes'
-      : `/api/notas?page=1&limit=9999${search ? `&q=${encodeURIComponent(search)}` : ''}`;
+    let url: string;
+    if (tab === 'pendientes') {
+      url = '/api/notas/pendientes';
+    } else {
+      const params = new URLSearchParams({ page: '1', limit: '9999' });
+      if (search) params.set('q', search);
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
+      if (itemSearch) params.set('itemSearch', itemSearch);
+      url = `/api/notas?${params}`;
+    }
     const res = await fetch(url);
     const data = await res.json();
     setNotas(data.data);
@@ -97,7 +109,7 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
     setPendingCount(data.total);
   };
 
-  useEffect(() => { fetchNotas(); }, [search, tab]);
+  useEffect(() => { fetchNotas(); }, [search, tab, dateFrom, dateTo, itemSearch]);
   useEffect(() => { fetchPendingCount(); }, []);
 
   const sorted = useMemo(() => {
@@ -190,11 +202,30 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
       <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
         <input
           type="text"
-          placeholder="Buscar..."
+          placeholder="Buscar nota, depto, solicitante, destino..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pa-orange focus:ring-1 focus:ring-pa-orange/30 focus:outline-none sm:max-w-md"
         />
+        <button
+          type="button"
+          onClick={() => setShowFilters((v) => !v)}
+          className={`shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+            showFilters || dateFrom || dateTo || itemSearch
+              ? 'border-pa-orange bg-pa-orange/10 text-pa-orange'
+              : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+            Filtros
+            {(dateFrom || dateTo || itemSearch) && (
+              <span className="rounded-full bg-pa-orange text-white px-1.5 py-0.5 text-xs leading-none">
+                {[dateFrom, dateTo, itemSearch].filter(Boolean).length}
+              </span>
+            )}
+          </span>
+        </button>
         <a
           href="/notas/nueva"
           className="shrink-0 rounded-lg bg-pa-orange px-4 py-2 text-sm font-semibold text-white hover:bg-pa-orange/90"
@@ -202,6 +233,50 @@ export default function NotasList({ isAdmin, username, notaPrefix = 'NS' }: Prop
           + Nueva
         </a>
       </div>
+
+      {showFilters && (
+        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Fecha desde</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pa-orange focus:ring-1 focus:ring-pa-orange/30 focus:outline-none"
+              />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Fecha hasta</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pa-orange focus:ring-1 focus:ring-pa-orange/30 focus:outline-none"
+              />
+            </div>
+            <div className="flex-[2] min-w-[200px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Buscar en ítems</label>
+              <input
+                type="text"
+                placeholder="Descripción, No. parte, No. serial..."
+                value={itemSearch}
+                onChange={(e) => { setItemSearch(e.target.value); setPage(1); }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pa-orange focus:ring-1 focus:ring-pa-orange/30 focus:outline-none"
+              />
+            </div>
+            {(dateFrom || dateTo || itemSearch) && (
+              <button
+                type="button"
+                onClick={() => { setDateFrom(''); setDateTo(''); setItemSearch(''); setPage(1); }}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Desktop table */}
       <div className="hidden overflow-x-auto rounded-xl border bg-white shadow-sm md:block">
